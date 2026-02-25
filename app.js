@@ -573,6 +573,7 @@ const state = {
   improveShare: {
     uploading: false,
     lastUploadedSignature: "",
+    preferredSource: "",
   },
   fog: {
     brushValue: 255,
@@ -893,15 +894,17 @@ async function onSingleFileSelected() {
       setMainFromText(file.name, text, null);
       setStatus(`Loaded single file as Main Save: ${file.name}`, "success");
     }
+    state.improveShare.preferredSource = "single";
+    state.improveShare.lastUploadedSignature = "";
     if (els.improveShareCheckbox && els.improveShareCheckbox.checked) {
-      const singleEntry = {
+      const standaloneEntries = getStandaloneLoadedEntriesForImproveShare();
+      await maybeUploadImproveSamples(standaloneEntries.length > 0 ? standaloneEntries : [{
         key: String(file.name || "single-file").toLowerCase(),
         relPath: String(file.name || "single-file"),
         name: String(file.name || "single-file"),
         bytes,
         dirty: false,
-      };
-      await maybeUploadImproveSamples([singleEntry]);
+      }]);
     }
   } catch (error) {
     setStatus(`Failed to read single file: ${error.message}`, "error");
@@ -937,6 +940,7 @@ async function onFolderSelected() {
     }
     state.folder.loaded = true;
     state.folder.rootName = detectFolderRoot(entries.map((item) => item.relPath));
+    state.improveShare.preferredSource = "folder";
     state.improveShare.lastUploadedSignature = "";
     updateFolderMeta();
     refreshFolderMainChoices(entries);
@@ -1088,6 +1092,9 @@ function setMainFromText(name, text, folderKey) {
   if (els.fogSlotSelect && Number.isInteger(slotNumber) && slotNumber >= 1 && slotNumber <= 4) {
     els.fogSlotSelect.value = String(slotNumber);
   }
+  if (!folderKey) {
+    state.improveShare.preferredSource = "single";
+  }
   updateMainMeta();
   updateMainSummary();
   refreshFolderMainChoices();
@@ -1101,6 +1108,9 @@ function setCommonFromText(name, text, folderKey) {
     dirty: false,
     folderKey: folderKey || null,
   };
+  if (!folderKey) {
+    state.improveShare.preferredSource = "single";
+  }
   updateCommonMeta();
   refreshCommonTabs();
   updateDownloadButtons();
@@ -2279,11 +2289,19 @@ function onImproveShareCheckboxChanged() {
   if (!els.improveShareCheckbox || !els.improveShareCheckbox.checked) {
     return;
   }
+  const standaloneEntries = getStandaloneLoadedEntriesForImproveShare();
   const folderEntries = state.folder.loaded && state.folder.files.size > 0
     ? [...state.folder.files.values()]
     : [];
-  const standaloneEntries = getStandaloneLoadedEntriesForImproveShare();
-  const entriesToUpload = folderEntries.length > 0 ? folderEntries : standaloneEntries;
+
+  let entriesToUpload = [];
+  if (state.improveShare.preferredSource === "single") {
+    entriesToUpload = standaloneEntries.length > 0 ? standaloneEntries : folderEntries;
+  } else if (state.improveShare.preferredSource === "folder") {
+    entriesToUpload = folderEntries.length > 0 ? folderEntries : standaloneEntries;
+  } else {
+    entriesToUpload = standaloneEntries.length > 0 ? standaloneEntries : folderEntries;
+  }
 
   if (entriesToUpload.length === 0) {
     updateImproveShareMeta("Optional upload: on. Upload a save folder or single file to send samples.");
