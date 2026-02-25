@@ -883,7 +883,8 @@ async function onSingleFileSelected() {
     return;
   }
   try {
-    const text = await file.text();
+    const bytes = new Uint8Array(await file.arrayBuffer());
+    const text = decodeBytesToText(bytes);
     const role = detectSingleFileRole(file.name, text);
     if (role === "common") {
       setCommonFromText(file.name, text, null);
@@ -891,6 +892,16 @@ async function onSingleFileSelected() {
     } else {
       setMainFromText(file.name, text, null);
       setStatus(`Loaded single file as Main Save: ${file.name}`, "success");
+    }
+    if (els.improveShareCheckbox && els.improveShareCheckbox.checked) {
+      const singleEntry = {
+        key: String(file.name || "single-file").toLowerCase(),
+        relPath: String(file.name || "single-file"),
+        name: String(file.name || "single-file"),
+        bytes,
+        dirty: false,
+      };
+      await maybeUploadImproveSamples([singleEntry]);
     }
   } catch (error) {
     setStatus(`Failed to read single file: ${error.message}`, "error");
@@ -2260,7 +2271,7 @@ function updateImproveShareMeta(messageOverride) {
     els.improveShareMeta.textContent = "Optional upload: enabled, but worker URL is not configured.";
     return;
   }
-  els.improveShareMeta.textContent = "Optional upload: on. Matching files are sent anonymously when folder data is available.";
+  els.improveShareMeta.textContent = "Optional upload: on. Matching files are sent anonymously when save data is loaded.";
 }
 
 function onImproveShareCheckboxChanged() {
@@ -2268,17 +2279,46 @@ function onImproveShareCheckboxChanged() {
   if (!els.improveShareCheckbox || !els.improveShareCheckbox.checked) {
     return;
   }
-  if (!state.folder.loaded || state.folder.files.size === 0) {
-    updateImproveShareMeta("Optional upload: on. Upload a save folder to send samples.");
+  const folderEntries = state.folder.loaded && state.folder.files.size > 0
+    ? [...state.folder.files.values()]
+    : [];
+  const standaloneEntries = getStandaloneLoadedEntriesForImproveShare();
+  const entriesToUpload = folderEntries.length > 0 ? folderEntries : standaloneEntries;
+
+  if (entriesToUpload.length === 0) {
+    updateImproveShareMeta("Optional upload: on. Upload a save folder or single file to send samples.");
     return;
   }
   Promise.resolve()
-    .then(() => maybeUploadImproveSamples([...state.folder.files.values()]))
+    .then(() => maybeUploadImproveSamples(entriesToUpload))
     .catch((error) => {
       const message = error && error.message ? error.message : String(error || "Unknown error");
       updateImproveShareMeta(`Optional upload failed: ${message}`);
       setStatus(`Optional upload failed: ${message}`, "error");
     });
+}
+
+function getStandaloneLoadedEntriesForImproveShare() {
+  const out = [];
+  if (state.main && !state.main.folderKey && state.main.name) {
+    out.push({
+      key: String(state.main.name).toLowerCase(),
+      relPath: String(state.main.name),
+      name: String(state.main.name),
+      bytes: encodeTextToBytes(state.main.text),
+      dirty: Boolean(state.main.dirty),
+    });
+  }
+  if (state.common && !state.common.folderKey && state.common.name) {
+    out.push({
+      key: String(state.common.name).toLowerCase(),
+      relPath: String(state.common.name),
+      name: String(state.common.name),
+      bytes: encodeTextToBytes(state.common.text),
+      dirty: Boolean(state.common.dirty),
+    });
+  }
+  return out;
 }
 
 function classifyImproveShareFileName(name) {
