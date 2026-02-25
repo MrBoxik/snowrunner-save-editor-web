@@ -567,6 +567,10 @@ const state = {
     rootName: "",
     files: new Map(),
   },
+  improveShare: {
+    uploading: false,
+    lastUploadedSignature: "",
+  },
   fog: {
     brushValue: 255,
     brushSize: 8,
@@ -716,7 +720,7 @@ function bindUi() {
     els.folderInput.addEventListener("change", onFolderSelected);
   }
   if (els.improveShareCheckbox) {
-    els.improveShareCheckbox.addEventListener("change", () => updateImproveShareMeta());
+    els.improveShareCheckbox.addEventListener("change", onImproveShareCheckboxChanged);
   }
   if (els.singleInput) {
     els.singleInput.addEventListener("change", onSingleFileSelected);
@@ -919,6 +923,7 @@ async function onFolderSelected() {
     }
     state.folder.loaded = true;
     state.folder.rootName = detectFolderRoot(entries.map((item) => item.relPath));
+    state.improveShare.lastUploadedSignature = "";
     updateFolderMeta();
     refreshFolderMainChoices(entries);
     refreshFogFileList();
@@ -2252,7 +2257,25 @@ function updateImproveShareMeta(messageOverride) {
     els.improveShareMeta.textContent = "Optional upload: enabled, but worker URL is not configured.";
     return;
   }
-  els.improveShareMeta.textContent = "Optional upload: on. Matching files are sent anonymously after folder upload.";
+  els.improveShareMeta.textContent = "Optional upload: on. Matching files are sent anonymously when folder data is available.";
+}
+
+function onImproveShareCheckboxChanged() {
+  updateImproveShareMeta();
+  if (!els.improveShareCheckbox || !els.improveShareCheckbox.checked) {
+    return;
+  }
+  if (!state.folder.loaded || state.folder.files.size === 0) {
+    updateImproveShareMeta("Optional upload: on. Upload a save folder to send samples.");
+    return;
+  }
+  Promise.resolve()
+    .then(() => maybeUploadImproveSamples([...state.folder.files.values()]))
+    .catch((error) => {
+      const message = error && error.message ? error.message : String(error || "Unknown error");
+      updateImproveShareMeta(`Optional upload failed: ${message}`);
+      setStatus(`Optional upload failed: ${message}`, "error");
+    });
 }
 
 function getImproveShareEntries(entriesOverride) {
@@ -2263,6 +2286,17 @@ function getImproveShareEntries(entriesOverride) {
     const isCommon = /^commonsslsave\d*\.(cfg|dat)$/.test(lower);
     return isMain || isCommon;
   });
+}
+
+function getImproveShareSignature(entriesOverride) {
+  const entries = getImproveShareEntries(entriesOverride);
+  if (entries.length === 0) {
+    return "";
+  }
+  const parts = entries
+    .map((entry) => `${String(entry.key || entry.name || "").toLowerCase()}:${entry.bytes instanceof Uint8Array ? entry.bytes.length : 0}`)
+    .sort();
+  return `${String(state.folder.rootName || "").toLowerCase()}|${parts.join("|")}`;
 }
 
 async function maybeUploadImproveSamples(entriesOverride) {
@@ -2285,6 +2319,21 @@ async function maybeUploadImproveSamples(entriesOverride) {
     return;
   }
 
+  const signature = getImproveShareSignature(sampleEntries);
+  if (signature && state.improveShare.lastUploadedSignature === signature) {
+    const message = "Optional upload already sent for this loaded folder.";
+    updateImproveShareMeta(message);
+    setStatus(message, "info");
+    return;
+  }
+  if (state.improveShare.uploading) {
+    const message = "Optional upload already in progress.";
+    updateImproveShareMeta(message);
+    setStatus(message, "info");
+    return;
+  }
+
+  state.improveShare.uploading = true;
   updateImproveShareMeta(`Uploading anonymous samples (${sampleEntries.length} file(s))...`);
   setStatus(`Uploading anonymous samples (${sampleEntries.length} file(s))...`, "info");
   try {
@@ -2293,12 +2342,15 @@ async function maybeUploadImproveSamples(entriesOverride) {
     const uploadedCountRaw = Number(result && result.uploadedCount);
     const uploadedCount = Number.isFinite(uploadedCountRaw) ? uploadedCountRaw : sampleEntries.length;
     const label = batchId ? `Optional upload complete (${uploadedCount} file(s), ID: ${batchId}).` : `Optional upload complete (${uploadedCount} file(s)).`;
+    state.improveShare.lastUploadedSignature = signature;
     updateImproveShareMeta(label);
     setStatus(label, "success");
   } catch (error) {
     const message = error && error.message ? error.message : String(error || "Unknown error");
     updateImproveShareMeta(`Optional upload failed: ${message}`);
     setStatus(`Optional upload failed: ${message}`, "error");
+  } finally {
+    state.improveShare.uploading = false;
   }
 }
 
