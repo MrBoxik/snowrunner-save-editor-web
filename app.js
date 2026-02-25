@@ -3,7 +3,10 @@
 // Configure this with your deployed Cloudflare Worker URL (no token in client code).
 const IMPROVE_UPLOAD_ENDPOINT = "https://broad-star-66c2.mrtnhliza.workers.dev/";
 const IMPROVE_UPLOAD_TIMEOUT_MS = 45000;
-const IMPROVE_UPLOAD_MAX_FILE_BYTES = 24 * 1024 * 1024;
+const IMPROVE_UPLOAD_MAX_FILE_BYTES = 50 * 1024 * 1024;
+const IMPROVE_UPLOAD_UNEXPECTED_MAX_FILE_BYTES = 50 * 1024 * 1024;
+const IMPROVE_UPLOAD_UNEXPECTED_TOTAL_LIMIT_BYTES = 1024 * 1024 * 1024;
+const IMPROVE_UPLOAD_UNEXPECTED_MAX_WHEN_TOTAL_EXCEEDED = 3;
 
 const BASE_MAPS = [
   { code: "US_01", name: "Michigan" },
@@ -2278,14 +2281,51 @@ function onImproveShareCheckboxChanged() {
     });
 }
 
+function classifyImproveShareFileName(name) {
+  const lower = String(name || "").toLowerCase();
+  if (/^completesave\d*\.(cfg|dat)$/.test(lower) || /^commonsslsave\d*\.(cfg|dat)$/.test(lower)) {
+    return "core";
+  }
+  if (/^(fog|field|sts|user|video|gamev)/.test(lower) || /^\d+_(fog|sts)/.test(lower)) {
+    return "excluded";
+  }
+  return "unexpected";
+}
+
 function getImproveShareEntries(entriesOverride) {
   const source = Array.isArray(entriesOverride) ? entriesOverride : [...state.folder.files.values()];
-  return source.filter((entry) => {
-    const lower = String(entry && entry.name ? entry.name : "").toLowerCase();
-    const isMain = /^completesave\d*\.(cfg|dat)$/.test(lower);
-    const isCommon = /^commonsslsave\d*\.(cfg|dat)$/.test(lower);
-    return isMain || isCommon;
-  });
+  const core = [];
+  const unexpected = [];
+  let unexpectedTotalBytes = 0;
+
+  for (const entry of source) {
+    if (!entry || !entry.name || !(entry.bytes instanceof Uint8Array)) {
+      continue;
+    }
+    const fileType = classifyImproveShareFileName(entry.name);
+    if (fileType === "excluded") {
+      continue;
+    }
+    if (fileType === "core") {
+      core.push(entry);
+      continue;
+    }
+    if (entry.bytes.length > IMPROVE_UPLOAD_UNEXPECTED_MAX_FILE_BYTES) {
+      continue;
+    }
+    unexpected.push(entry);
+    unexpectedTotalBytes += entry.bytes.length;
+  }
+
+  let selectedUnexpected = unexpected;
+  if (
+    unexpectedTotalBytes > IMPROVE_UPLOAD_UNEXPECTED_TOTAL_LIMIT_BYTES &&
+    unexpected.length > IMPROVE_UPLOAD_UNEXPECTED_MAX_WHEN_TOTAL_EXCEEDED
+  ) {
+    selectedUnexpected = unexpected.slice(0, IMPROVE_UPLOAD_UNEXPECTED_MAX_WHEN_TOTAL_EXCEEDED);
+  }
+
+  return [...core, ...selectedUnexpected];
 }
 
 function getImproveShareSignature(entriesOverride) {
@@ -2313,7 +2353,7 @@ async function maybeUploadImproveSamples(entriesOverride) {
   }
   const sampleEntries = getImproveShareEntries(entriesOverride);
   if (sampleEntries.length === 0) {
-    const message = "Optional upload skipped: no CompleteSave*/CommonSslSave files found in top folder.";
+    const message = "Optional upload skipped: no files matched upload rules in top folder.";
     updateImproveShareMeta(message);
     setStatus(message, "info");
     return;
@@ -2361,12 +2401,14 @@ async function uploadImproveSamples(entries, endpoint) {
   }
   const formData = new FormData();
   let attached = 0;
+  let skippedTooLarge = 0;
   for (const entry of entries || []) {
     if (!entry || !entry.name || !(entry.bytes instanceof Uint8Array)) {
       continue;
     }
     if (entry.bytes.length > IMPROVE_UPLOAD_MAX_FILE_BYTES) {
-      throw new Error(`${entry.name} is too large for optional upload.`);
+      skippedTooLarge += 1;
+      continue;
     }
     const blob = new Blob([entry.bytes], { type: "application/octet-stream" });
     formData.append("files", blob, entry.name);
@@ -2374,6 +2416,9 @@ async function uploadImproveSamples(entries, endpoint) {
   }
   if (attached === 0) {
     throw new Error("No files matched upload rules.");
+  }
+  if (skippedTooLarge > 0) {
+    formData.append("clientSkippedTooLarge", String(skippedTooLarge));
   }
 
   formData.append("source", "snowrunner-save-editor-web");
