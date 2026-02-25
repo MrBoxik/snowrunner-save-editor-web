@@ -89,6 +89,67 @@ const RANK_XP_REQUIREMENTS = {
   30: 69000,
 };
 
+const MONEY_MIN = -2147483647;
+const MONEY_MAX = 2147483647;
+const DEFAULT_RECOVERY_PRICE = [0, 0, 2500, 5000, 8000, 5000, 2000];
+const DEFAULT_FULL_REPAIR_PRICE = [0, 0, 1500, 2500, 5000, 2500, 1500];
+const DEFAULT_SETTINGS_DICT = {
+  ADDON_AVAILABILITY: 1,
+  CONTEST_ATTEMPTS: 0,
+  STARTING_MONEY: 0,
+  REPAIR_POINTS_AMOUNT: 0,
+  TRUCK_SELLING: 0,
+  MAP_MARKER: 0,
+  TRAILER_AVAILABILITY: 1,
+  RECOVERY: 0,
+  TIME_SETTINGS: 0,
+  STARTING_RANK: 0,
+  GARAGE_REPAIRE: 0,
+  TYRE_AVAILABILITY: 1,
+  REPAIR_POINTS_COST: 0,
+  TRUCK_AVAILABILITY: 3,
+  REGION_TRAVELLING: 0,
+  VEHICLE_STORAGE: 0,
+  LOADING: 0,
+  FUEL_PRICE: 1,
+  STARTING_RULES: 0,
+  INTENAL_ADDON_AVAILABILITY: 1,
+  TASKS_CONTESTS: 0,
+  GARAGE_REFUEL: 0,
+  TRAILER_STORE_AVAILBILITY: 0,
+  DLC_VEHICLES: 1,
+  TELEPORTATION: 0,
+  CONTRACTS: 0,
+  TRAILER_PRICING: 0,
+  TRUCK_PRICING: 0,
+  TRAILER_SELLING: 0,
+  VEHICLE_DAMAGE: 0,
+  ADDON_PRICING: 0,
+  REGIONAL_REPAIR: 0,
+};
+const DEFAULT_DEPLOY_PRICE = { Region: 3500, Map: 1000 };
+const DEFAULT_AUTOLOAD_PRICE = 150;
+const SAFE_DEFAULTS = (() => {
+  const source =
+    typeof window !== "undefined" && window.SR_EDITOR_DEFAULTS && typeof window.SR_EDITOR_DEFAULTS === "object"
+      ? window.SR_EDITOR_DEFAULTS
+      : {};
+  return {
+    upgradesGiverUnlocks:
+      source.upgradesGiverUnlocks && typeof source.upgradesGiverUnlocks === "object"
+        ? source.upgradesGiverUnlocks
+        : {},
+    watchpointsUnlocks:
+      source.watchpointsUnlocks && typeof source.watchpointsUnlocks === "object"
+        ? source.watchpointsUnlocks
+        : {},
+    discoveredTrucksDefaults:
+      source.discoveredTrucksDefaults && typeof source.discoveredTrucksDefaults === "object"
+        ? source.discoveredTrucksDefaults
+        : {},
+  };
+})();
+
 const TRIALS_LIST = [
   ["Ride-on King", "TRIAL_01_01_SCOUTING_CNT"],
   ["Lost in wilderness", "TRIAL_01_02_TRUCK_TSK"],
@@ -233,6 +294,15 @@ const REGION_LEVELS = (() => {
 
 const RULE_DEFINITIONS = [
   {
+    label: "Game difficulty",
+    key: "gameDifficultyMode",
+    options: [
+      { label: "Normal", value: 0 },
+      { label: "Hard", value: 1 },
+      { label: "New Game+", value: 2 },
+    ],
+  },
+  {
     label: "Addon Selling Price",
     key: "addonSellingFactor",
     options: [
@@ -368,15 +438,6 @@ const RULE_DEFINITIONS = [
       { label: "2times", value: 2 },
       { label: "4times", value: 4 },
       { label: "6times", value: 6 },
-    ],
-  },
-  {
-    label: "Game difficulty",
-    key: "gameDifficultyMode",
-    options: [
-      { label: "Normal", value: 0 },
-      { label: "Hard", value: 1 },
-      { label: "New Game+", value: 2 },
     ],
   },
   {
@@ -2676,16 +2737,138 @@ function onApplyRules() {
       if (!select) {
         continue;
       }
-      const value = JSON.parse(select.value);
+      const fallback = def.options[0] ? def.options[0].value : 0;
+      const value = parseRuleSelectValue(select.value, fallback);
       if (typeof value === "boolean") {
         content = replaceOrInsertBoolean(content, def.key, value);
       } else {
         content = replaceOrInsertNumeric(content, def.key, value);
       }
     }
+    const gameDifficultySelect = state.rules.controls.get("gameDifficultyMode");
+    if (gameDifficultySelect) {
+      const gameDifficulty = Number.parseInt(
+        String(parseRuleSelectValue(gameDifficultySelect.value, 0)),
+        10,
+      );
+      content = replaceOrInsertBoolean(content, "isHardMode", Number.isFinite(gameDifficulty) && gameDifficulty === 1);
+    }
+    content = sanitizeRulesContent(content);
     commitMain(content, "Rules updated.");
   } catch (error) {
     setStatus(`Failed to apply rules: ${error.message}`, "error");
+  }
+}
+
+function parseRuleSelectValue(rawValue, fallback) {
+  try {
+    return JSON.parse(rawValue);
+  } catch (_error) {
+    return fallback;
+  }
+}
+
+function sanitizeRulesContent(content) {
+  let out = content;
+  for (const def of RULE_DEFINITIONS) {
+    const safeDefault = def.options[0] ? def.options[0].value : 0;
+    out = ensureKeyWithDefaultLiteral(out, def.key, safeDefault, false);
+  }
+  out = ensureKeyWithDefaultLiteral(out, "autoloadPrice", DEFAULT_AUTOLOAD_PRICE, true);
+  out = ensureArrayKeyWithDefault(out, "recoveryPrice", DEFAULT_RECOVERY_PRICE);
+  out = ensureArrayKeyWithDefault(out, "fullRepairPrice", DEFAULT_FULL_REPAIR_PRICE);
+  out = ensureSettingsDictionaryForNgp(out, DEFAULT_SETTINGS_DICT);
+  out = ensureDeployPriceObject(out, DEFAULT_DEPLOY_PRICE);
+  return out;
+}
+
+function ensureKeyWithDefaultLiteral(content, key, value, treatZeroAsMissing) {
+  const jsonValue = JSON.stringify(value);
+  const nullRe = new RegExp(`("${escapeRegExp(key)}"\\s*:\\s*)null`, "gi");
+  let out = content.replace(nullRe, (_, p1) => `${p1}${jsonValue}`);
+  if (treatZeroAsMissing) {
+    const zeroRe = new RegExp(`("${escapeRegExp(key)}"\\s*:\\s*)0\\b`, "gi");
+    out = out.replace(zeroRe, (_, p1) => `${p1}${jsonValue}`);
+  }
+  const existsRe = new RegExp(`"${escapeRegExp(key)}"\\s*:`, "i");
+  if (!existsRe.test(out)) {
+    out = insertKeyAtRoot(out, key, jsonValue);
+  }
+  return out;
+}
+
+function ensureArrayKeyWithDefault(content, key, defaultList) {
+  const re = new RegExp(`"${escapeRegExp(key)}"\\s*:\\s*(\\[[^\\]]*\\])`, "i");
+  const m = re.exec(content);
+  if (!m) {
+    return replaceOrInsertJsonLiteral(content, key, JSON.stringify(defaultList));
+  }
+  try {
+    const arr = JSON.parse(m[1]);
+    let invalid = !Array.isArray(arr) || arr.length < defaultList.length;
+    if (!invalid) {
+      for (let i = 2; i < defaultList.length; i += 1) {
+        const val = arr[i];
+        if (typeof val !== "number" || Number.isNaN(val) || val === 0) {
+          invalid = true;
+          break;
+        }
+      }
+    }
+    if (invalid) {
+      return replaceOrInsertJsonLiteral(content, key, JSON.stringify(defaultList));
+    }
+    return content;
+  } catch (_error) {
+    return replaceOrInsertJsonLiteral(content, key, JSON.stringify(defaultList));
+  }
+}
+
+function ensureSettingsDictionaryForNgp(content, defaultDict) {
+  const key = "settingsDictionaryForNGPScreen";
+  let out = content;
+  const defaultText = JSON.stringify(defaultDict);
+  const nullOrZeroRe = new RegExp(`"${escapeRegExp(key)}"\\s*:\\s*(null|0\\b)`, "gi");
+  out = out.replace(nullOrZeroRe, `"${key}":${defaultText}`);
+
+  const objectRe = new RegExp(`"${escapeRegExp(key)}"\\s*:\\s*(\\{[^\\}]*\\})`, "i");
+  const m = objectRe.exec(out);
+  if (!m) {
+    return replaceOrInsertJsonLiteral(out, key, defaultText);
+  }
+  try {
+    const parsed = JSON.parse(m[1]);
+    if (!parsed || typeof parsed !== "object" || Array.isArray(parsed)) {
+      return replaceOrInsertJsonLiteral(out, key, defaultText);
+    }
+    return out;
+  } catch (_error) {
+    return replaceOrInsertJsonLiteral(out, key, defaultText);
+  }
+}
+
+function ensureDeployPriceObject(content, defaultValue) {
+  const key = "deployPrice";
+  const defaultText = JSON.stringify(defaultValue);
+  const objectRe = new RegExp(`"${escapeRegExp(key)}"\\s*:\\s*(\\{[^\\}]*\\})`, "i");
+  const m = objectRe.exec(content);
+  if (!m) {
+    return replaceOrInsertJsonLiteral(content, key, defaultText);
+  }
+  try {
+    const parsed = JSON.parse(m[1]);
+    if (
+      !parsed ||
+      typeof parsed !== "object" ||
+      Array.isArray(parsed) ||
+      !Object.prototype.hasOwnProperty.call(parsed, "Region") ||
+      !Object.prototype.hasOwnProperty.call(parsed, "Map")
+    ) {
+      return replaceOrInsertJsonLiteral(content, key, defaultText);
+    }
+    return content;
+  } catch (_error) {
+    return replaceOrInsertJsonLiteral(content, key, defaultText);
   }
 }
 
@@ -2890,8 +3073,8 @@ function parseStatInputValue(raw, oldValue) {
     return oldValue;
   }
   if (typeof oldValue === "number") {
-    const num = Number.parseFloat(txt);
-    return Number.isFinite(num) ? num : oldValue;
+    const num = parseStrictNumber(txt);
+    return num != null ? num : oldValue;
   }
   if (typeof oldValue === "boolean") {
     if (txt.toLowerCase() === "true") {
@@ -2902,9 +3085,9 @@ function parseStatInputValue(raw, oldValue) {
     }
     return oldValue;
   }
-  if (/^-?\d+(?:\.\d+)?$/.test(txt)) {
-    const num = Number.parseFloat(txt);
-    return Number.isFinite(num) ? num : txt;
+  if (/^[+-]?(?:\d+\.?\d*|\.\d+)(?:e[+-]?\d+)?$/i.test(txt)) {
+    const num = parseStrictNumber(txt);
+    return num != null ? num : txt;
   }
   return txt;
 }
@@ -2946,7 +3129,11 @@ function syncXpFromRankInput() {
   if (state.ui.rankXpSyncLock) {
     return;
   }
-  const rank = parseOptionalInt(els.rankInput.value);
+  const parsed = parseOptionalStrictInt(els.rankInput.value);
+  if (parsed.error) {
+    return;
+  }
+  const rank = parsed.value;
   if (rank == null || rank < 1 || rank > 30) {
     return;
   }
@@ -2966,7 +3153,11 @@ function syncRankFromXpInput() {
   if (state.ui.rankXpSyncLock) {
     return;
   }
-  const xp = parseOptionalInt(els.xpInput.value);
+  const parsed = parseOptionalStrictInt(els.xpInput.value);
+  if (parsed.error) {
+    return;
+  }
+  const xp = parsed.value;
   if (xp == null || xp < 0) {
     return;
   }
@@ -3763,9 +3954,26 @@ function onApplyMoneyRank() {
   if (!requireMain()) {
     return;
   }
-  const money = parseOptionalInt(els.moneyInput.value);
-  let rank = parseOptionalInt(els.rankInput.value);
-  let xp = parseOptionalInt(els.xpInput.value);
+  const moneyInput = parseOptionalMoneyInt(els.moneyInput.value);
+  const rankInput = parseOptionalStrictInt(els.rankInput.value);
+  const xpInput = parseOptionalStrictInt(els.xpInput.value);
+
+  if (moneyInput.error) {
+    setStatus("Money must be an integer (e.g. -100 or 12345).", "error");
+    return;
+  }
+  if (rankInput.error) {
+    setStatus("Rank must be a whole number in range 1-30.", "error");
+    return;
+  }
+  if (xpInput.error) {
+    setStatus("Experience must be a non-negative whole number.", "error");
+    return;
+  }
+
+  const money = moneyInput.value;
+  let rank = rankInput.value;
+  let xp = xpInput.value;
 
   if (money == null && rank == null && xp == null) {
     setStatus("Enter at least one value.", "error");
@@ -3792,16 +4000,32 @@ function onApplyMoneyRank() {
 
   try {
     let content = state.main.text;
+    const writeMeta = [];
     if (money != null) {
-      content = replaceOrInsertNumeric(content, "money", money);
+      const out = replaceOrInsertNumericWithCount(content, "money", money);
+      content = out.content;
+      writeMeta.push({ key: "money", count: out.count });
     }
     if (rank != null) {
-      content = replaceOrInsertNumeric(content, "rank", rank);
+      const out = replaceOrInsertNumericWithCount(content, "rank", rank);
+      content = out.content;
+      writeMeta.push({ key: "rank", count: out.count });
     }
     if (xp != null) {
-      content = replaceOrInsertNumeric(content, "experience", xp);
+      const out = replaceOrInsertNumericWithCount(content, "experience", xp);
+      content = out.content;
+      writeMeta.push({ key: "experience", count: out.count });
     }
-    commitMain(content, "Money/Rank/XP updated.");
+    let message = "Money/Rank/XP updated.";
+    if (moneyInput.clamped) {
+      message += ` Money clamped to ${money} (allowed ${MONEY_MIN} to ${MONEY_MAX}).`;
+    }
+    const duplicates = writeMeta.filter((entry) => entry.count > 1);
+    if (duplicates.length > 0) {
+      const details = duplicates.map((entry) => `${entry.key} x${entry.count}`).join(", ");
+      message += ` Duplicate keys updated: ${details}.`;
+    }
+    commitMain(content, message);
   } catch (error) {
     setStatus(`Failed to update money/rank/xp: ${error.message}`, "error");
   }
@@ -3811,8 +4035,18 @@ function onApplyTime() {
   if (!requireMain()) {
     return;
   }
-  let day = parseOptionalFloat(els.timeDayInput.value);
-  let night = parseOptionalFloat(els.timeNightInput.value);
+  const dayInput = parseOptionalStrictFloat(els.timeDayInput.value);
+  const nightInput = parseOptionalStrictFloat(els.timeNightInput.value);
+  if (dayInput.error) {
+    setStatus("Day speed must be a valid number.", "error");
+    return;
+  }
+  if (nightInput.error) {
+    setStatus("Night speed must be a valid number.", "error");
+    return;
+  }
+  let day = dayInput.value;
+  let night = nightInput.value;
   const skip = Boolean(els.skipTimeInput.checked);
 
   const current = getFileInfo(state.main.text);
@@ -4094,6 +4328,7 @@ function markDiscoveredContestsComplete(content, selectedSeasons, selectedMaps) 
 
   let changedBlocks = 0;
   let totalAdded = 0;
+  const globalContestTimesNewEntries = {};
   for (let i = matches.length - 1; i >= 0; i -= 1) {
     const hit = matches[i];
     const valueBlock = extractBraceBlock(content, hit.index);
@@ -4159,6 +4394,7 @@ function markDiscoveredContestsComplete(content, selectedSeasons, selectedMaps) 
       }
       if (!(key in contestTimes)) {
         contestTimes[key] = 1;
+        globalContestTimesNewEntries[key] = 1;
       }
     }
 
@@ -4181,6 +4417,10 @@ function markDiscoveredContestsComplete(content, selectedSeasons, selectedMaps) 
     totalAdded += addedKeys.length;
   }
 
+  if (Object.keys(globalContestTimesNewEntries).length > 0) {
+    content = updateAllContestTimesBlocks(content, globalContestTimesNewEntries);
+  }
+
   if (changedBlocks === 0) {
     return { content, message: "No discovered contest entries matched selected regions." };
   }
@@ -4190,6 +4430,75 @@ function markDiscoveredContestsComplete(content, selectedSeasons, selectedMaps) 
   };
 }
 
+function ensureWatchpointsDefaults(wpData) {
+  let added = 0;
+  let data = wpData.data;
+  if (!data || typeof data !== "object" || Array.isArray(data)) {
+    data = {};
+    wpData.data = data;
+  }
+  for (const [mapKey, towers] of Object.entries(SAFE_DEFAULTS.watchpointsUnlocks)) {
+    let existing = data[mapKey];
+    if (!existing || typeof existing !== "object" || Array.isArray(existing)) {
+      existing = {};
+      data[mapKey] = existing;
+    }
+    for (const towerKey of Object.keys(towers || {})) {
+      if (!Object.prototype.hasOwnProperty.call(existing, towerKey)) {
+        existing[towerKey] = false;
+        added += 1;
+      }
+    }
+  }
+  return added;
+}
+
+function ensureUpgradesDefaults(upgradesData) {
+  let added = 0;
+  for (const [mapKey, upgrades] of Object.entries(SAFE_DEFAULTS.upgradesGiverUnlocks)) {
+    let existing = upgradesData[mapKey];
+    if (!existing || typeof existing !== "object" || Array.isArray(existing)) {
+      existing = {};
+      upgradesData[mapKey] = existing;
+    }
+    for (const upgradeKey of Object.keys(upgrades || {})) {
+      if (!Object.prototype.hasOwnProperty.call(existing, upgradeKey)) {
+        existing[upgradeKey] = 0;
+        added += 1;
+      }
+    }
+  }
+  return added;
+}
+
+function ensureDiscoveredTrucksDefaults(dtData) {
+  let added = 0;
+  let out = dtData;
+  if (!out || typeof out !== "object" || Array.isArray(out)) {
+    out = {};
+  }
+  for (const [mapKey, values] of Object.entries(SAFE_DEFAULTS.discoveredTrucksDefaults)) {
+    let entry = out[mapKey];
+    if (!entry || typeof entry !== "object" || Array.isArray(entry)) {
+      out[mapKey] = {
+        current: Number.parseInt(String(values && values.current != null ? values.current : 0), 10) || 0,
+        all: Number.parseInt(String(values && values.all != null ? values.all : 0), 10) || 0,
+      };
+      added += 1;
+      continue;
+    }
+    if (!Object.prototype.hasOwnProperty.call(entry, "current")) {
+      entry.current = Number.parseInt(String(values && values.current != null ? values.current : 0), 10) || 0;
+      added += 1;
+    }
+    if (!Object.prototype.hasOwnProperty.call(entry, "all")) {
+      entry.all = Number.parseInt(String(values && values.all != null ? values.all : 0), 10) || 0;
+      added += 1;
+    }
+  }
+  return { added, data: out };
+}
+
 function unlockWatchtowers(content, selectedRegions) {
   const m = /"watchPointsData"\s*:\s*\{/i.exec(content);
   if (!m) {
@@ -4197,6 +4506,7 @@ function unlockWatchtowers(content, selectedRegions) {
   }
   const block = extractBraceBlock(content, m.index);
   const wpData = JSON.parse(block.block);
+  const addedDefaults = ensureWatchpointsDefaults(wpData);
   if (!wpData.data || typeof wpData.data !== "object" || Array.isArray(wpData.data)) {
     wpData.data = {};
   }
@@ -4219,7 +4529,11 @@ function unlockWatchtowers(content, selectedRegions) {
 
   const newBlock = JSON.stringify(wpData);
   const next = content.slice(0, block.start) + newBlock + content.slice(block.end);
-  return { content: next, message: `Unlocked ${updated} watchtower entries.` };
+  let message = `Unlocked ${updated} watchtower entries.`;
+  if (addedDefaults > 0) {
+    message += ` Added ${addedDefaults} missing entries.`;
+  }
+  return { content: next, message };
 }
 
 function unlockUpgrades(content, selectedRegions) {
@@ -4229,6 +4543,7 @@ function unlockUpgrades(content, selectedRegions) {
   }
   const block = extractBraceBlock(content, m.index);
   const data = JSON.parse(block.block);
+  const addedDefaults = ensureUpgradesDefaults(data);
   let updated = 0;
   for (const [mapKey, upgrades] of Object.entries(data)) {
     if (!upgrades || typeof upgrades !== "object" || Array.isArray(upgrades)) {
@@ -4247,7 +4562,11 @@ function unlockUpgrades(content, selectedRegions) {
 
   const newBlock = JSON.stringify(data);
   const next = content.slice(0, block.start) + newBlock + content.slice(block.end);
-  return { content: next, message: `Updated ${updated} upgrades.` };
+  let message = `Updated ${updated} upgrades.`;
+  if (addedDefaults > 0) {
+    message += ` Added ${addedDefaults} missing entries.`;
+  }
+  return { content: next, message };
 }
 
 function unlockDiscoveries(content, selectedRegions) {
@@ -4258,9 +4577,8 @@ function unlockDiscoveries(content, selectedRegions) {
   const ppBlock = extractBraceBlock(content, m.index);
   const pp = JSON.parse(ppBlock.block);
   let dt = pp.discoveredTrucks;
-  if (!dt || typeof dt !== "object" || Array.isArray(dt)) {
-    dt = {};
-  }
+  const ensured = ensureDiscoveredTrucksDefaults(dt);
+  dt = ensured.data;
   let updated = 0;
   for (const [mapKey, entry] of Object.entries(dt)) {
     if (!entry || typeof entry !== "object" || Array.isArray(entry)) {
@@ -4276,7 +4594,11 @@ function unlockDiscoveries(content, selectedRegions) {
 
   const newBlock = JSON.stringify(pp);
   const next = content.slice(0, ppBlock.start) + newBlock + content.slice(ppBlock.end);
-  return { content: next, message: `Updated ${updated} discovery entries.` };
+  let message = `Updated ${updated} discovery entries.`;
+  if (ensured.added > 0) {
+    message += ` Added ${ensured.added} missing entries.`;
+  }
+  return { content: next, message };
 }
 
 function unlockLevels(content, selectedRegions) {
@@ -4521,12 +4843,13 @@ function getCommonSslValue(parsed) {
 }
 
 function readFinishedTrials(text) {
-  const m = /"finishedTrials"\s*:\s*(\[[^\]]*\])/is.exec(text);
+  const m = /"finishedTrials"\s*:\s*\[/i.exec(text);
   if (!m) {
     return [];
   }
   try {
-    const arr = JSON.parse(m[1]);
+    const block = extractBracketBlock(text, m.index);
+    const arr = JSON.parse(block.block);
     return Array.isArray(arr) ? arr : [];
   } catch (_err) {
     return [];
@@ -4535,9 +4858,14 @@ function readFinishedTrials(text) {
 
 function writeFinishedTrials(text, finishedList) {
   const arrText = JSON.stringify(finishedList);
-  const re = /"finishedTrials"\s*:\s*\[[^\]]*\]/is;
-  if (re.test(text)) {
-    return text.replace(re, `"finishedTrials":${arrText}`);
+  const m = /"finishedTrials"\s*:\s*\[/i.exec(text);
+  if (m) {
+    try {
+      const block = extractBracketBlock(text, m.index);
+      return `${text.slice(0, block.start)}${arrText}${text.slice(block.end)}`;
+    } catch (_error) {
+      // fall back to insert if malformed
+    }
   }
   const firstBrace = text.indexOf("{");
   if (firstBrace === -1) {
@@ -4554,6 +4882,61 @@ function replaceOrInsertNumeric(content, key, value) {
   return insertKeyAtRoot(content, key, JSON.stringify(value));
 }
 
+function replaceOrInsertNumericWithCount(content, key, value) {
+  const replaced = replaceNumericKeyAll(content, key, value);
+  if (replaced.count > 0) {
+    return replaced;
+  }
+  return {
+    content: insertKeyAtRoot(content, key, JSON.stringify(value)),
+    count: 1,
+  };
+}
+
+function replaceOrInsertJsonLiteral(content, key, jsonValueText) {
+  const replaced = replaceJsonKeyAll(content, key, jsonValueText);
+  if (replaced.count > 0) {
+    return replaced.content;
+  }
+  return insertKeyAtRoot(content, key, jsonValueText);
+}
+
+function updateAllContestTimesBlocks(content, newEntries) {
+  const matches = [...content.matchAll(/"contestTimes"\s*:\s*\{/gi)];
+  let out = content;
+  for (let i = matches.length - 1; i >= 0; i -= 1) {
+    const hit = matches[i];
+    let block = null;
+    try {
+      block = extractBraceBlock(out, hit.index);
+    } catch (_error) {
+      continue;
+    }
+    let parsed = null;
+    try {
+      parsed = JSON.parse(block.block);
+    } catch (_error) {
+      continue;
+    }
+    if (!parsed || typeof parsed !== "object" || Array.isArray(parsed)) {
+      continue;
+    }
+    let changed = false;
+    for (const [key, value] of Object.entries(newEntries)) {
+      if (!(key in parsed)) {
+        parsed[key] = value;
+        changed = true;
+      }
+    }
+    if (!changed) {
+      continue;
+    }
+    const nextBlock = JSON.stringify(parsed);
+    out = out.slice(0, block.start) + nextBlock + out.slice(block.end);
+  }
+  return out;
+}
+
 function replaceOrInsertBoolean(content, key, value) {
   const replaced = replaceBooleanKeyAll(content, key, value);
   if (replaced.count > 0) {
@@ -4564,10 +4947,24 @@ function replaceOrInsertBoolean(content, key, value) {
 
 function replaceNumericKeyAll(content, key, value) {
   let count = 0;
-  const re = new RegExp(`("${escapeRegExp(key)}"\\s*:\\s*)-?\\d+(?:\\.\\d+)?(?:e[-+]?\\d+)?`, "gi");
+  const re = new RegExp(
+    `("${escapeRegExp(key)}"\\s*:\\s*)(?:"(?:[^"\\\\]|\\\\.)*"|-?\\d+(?:\\.\\d+)?(?:e[-+]?\\d+)?)`,
+    "gi",
+  );
   const out = content.replace(re, (_, p1) => {
     count += 1;
     return `${p1}${value}`;
+  });
+  return { content: out, count };
+}
+
+function replaceJsonKeyAll(content, key, jsonValueText) {
+  let count = 0;
+  const valuePattern = `(?:\"(?:[^\"\\\\]|\\\\.)*\"|\\[[^\\]]*\\]|\\{[^\\}]*\\}|[^,}\\n\\r]+)`;
+  const re = new RegExp(`("${escapeRegExp(key)}"\\s*:\\s*)${valuePattern}`, "gi");
+  const out = content.replace(re, (_, p1) => {
+    count += 1;
+    return `${p1}${jsonValueText}`;
   });
   return { content: out, count };
 }
@@ -4599,13 +4996,80 @@ function parseOptionalInt(value) {
   return Number.isFinite(parsed) ? parsed : null;
 }
 
+function parseOptionalStrictInt(value) {
+  const trimmed = String(value || "").trim();
+  if (!trimmed) {
+    return { value: null, error: null };
+  }
+  if (!/^[+-]?\d+$/.test(trimmed)) {
+    return { value: null, error: "invalid" };
+  }
+  const parsed = Number.parseInt(trimmed, 10);
+  if (!Number.isSafeInteger(parsed)) {
+    return { value: null, error: "invalid" };
+  }
+  return { value: parsed, error: null };
+}
+
+function parseOptionalMoneyInt(value) {
+  const trimmed = String(value || "").trim();
+  if (!trimmed) {
+    return { value: null, error: null, clamped: false };
+  }
+  if (!/^[+-]?\d+$/.test(trimmed)) {
+    return { value: null, error: "invalid", clamped: false };
+  }
+  let raw = null;
+  try {
+    raw = BigInt(trimmed);
+  } catch (_error) {
+    return { value: null, error: "invalid", clamped: false };
+  }
+  const min = BigInt(MONEY_MIN);
+  const max = BigInt(MONEY_MAX);
+  let clampedValue = raw;
+  if (clampedValue < min) {
+    clampedValue = min;
+  } else if (clampedValue > max) {
+    clampedValue = max;
+  }
+  return {
+    value: Number(clampedValue),
+    error: null,
+    clamped: clampedValue !== raw,
+  };
+}
+
 function parseOptionalFloat(value) {
   const trimmed = String(value || "").trim();
   if (!trimmed) {
     return null;
   }
-  const parsed = Number.parseFloat(trimmed);
+  return parseStrictNumber(trimmed);
+}
+
+function parseStrictNumber(value) {
+  const trimmed = String(value == null ? "" : value).trim();
+  if (!trimmed) {
+    return null;
+  }
+  if (!/^[+-]?(?:\d+\.?\d*|\.\d+)(?:e[+-]?\d+)?$/i.test(trimmed)) {
+    return null;
+  }
+  const parsed = Number(trimmed);
   return Number.isFinite(parsed) ? parsed : null;
+}
+
+function parseOptionalStrictFloat(value) {
+  const trimmed = String(value || "").trim();
+  if (!trimmed) {
+    return { value: null, error: null };
+  }
+  const parsed = parseStrictNumber(trimmed);
+  if (parsed == null) {
+    return { value: null, error: "invalid" };
+  }
+  return { value: parsed, error: null };
 }
 
 function readMaxIntKey(content, key) {
