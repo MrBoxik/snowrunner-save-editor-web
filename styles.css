@@ -224,10 +224,19 @@ body {
 }
 
 .upload-card h2 {
-  margin: 0 0 6px;
+  margin: 0;
   font-size: 1.08rem;
   letter-spacing: 0.035em;
   text-transform: uppercase;
+}
+
+.upload-card-head {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 10px;
+  flex-wrap: wrap;
+  margin: 0 0 6px;
 }
 
 .upload-card p {
@@ -237,6 +246,40 @@ body {
 
 .upload-card-wide {
   grid-column: 1 / -1;
+}
+
+.upload-picker {
+  position: relative;
+  display: inline-flex;
+  flex-direction: column;
+  align-items: flex-start;
+}
+
+.upload-menu {
+  position: absolute;
+  top: calc(100% + 6px);
+  left: 0;
+  min-width: 218px;
+  display: grid;
+  gap: 6px;
+  border: 1px solid color-mix(in srgb, var(--border) 82%, #83929a 18%);
+  border-radius: 10px;
+  padding: 8px;
+  background: rgba(33, 45, 53, 0.96);
+  box-shadow: 0 10px 20px rgba(4, 8, 10, 0.42);
+  z-index: 8;
+}
+
+.upload-menu[hidden] {
+  display: none;
+}
+
+.upload-menu-btn {
+  width: 100%;
+  text-transform: none;
+  letter-spacing: 0.01em;
+  font-size: 0.9rem;
+  text-align: left;
 }
 
 .folder-choice-wrap {

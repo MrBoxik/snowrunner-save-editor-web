@@ -604,8 +604,10 @@ const els = {
   commonInput: document.getElementById("common-file-input"),
   singleInput: document.getElementById("single-file-input"),
   folderInput: document.getElementById("folder-input"),
-  folderUploadBtn: document.getElementById("folder-upload-btn"),
-  singleUploadBtn: document.getElementById("single-upload-btn"),
+  uploadBtn: document.getElementById("upload-btn"),
+  uploadMenu: document.getElementById("upload-menu"),
+  uploadMenuFolderBtn: document.getElementById("upload-menu-folder-btn"),
+  uploadMenuFileBtn: document.getElementById("upload-menu-file-btn"),
   improveShareCheckbox: document.getElementById("improve-share-checkbox"),
   improveShareMeta: document.getElementById("improve-share-meta"),
   mainMeta: document.getElementById("main-meta"),
@@ -707,11 +709,20 @@ function init() {
 }
 
 function bindUi() {
-  if (els.folderUploadBtn && els.folderInput) {
-    els.folderUploadBtn.addEventListener("click", () => els.folderInput.click());
+  if (els.uploadBtn) {
+    els.uploadBtn.addEventListener("click", onUploadMenuToggle);
   }
-  if (els.singleUploadBtn && els.singleInput) {
-    els.singleUploadBtn.addEventListener("click", () => els.singleInput.click());
+  if (els.uploadMenuFolderBtn && els.folderInput) {
+    els.uploadMenuFolderBtn.addEventListener("click", () => {
+      closeUploadMenu();
+      els.folderInput.click();
+    });
+  }
+  if (els.uploadMenuFileBtn && els.singleInput) {
+    els.uploadMenuFileBtn.addEventListener("click", () => {
+      closeUploadMenu();
+      els.singleInput.click();
+    });
   }
   if (els.mainInput) {
     els.mainInput.addEventListener("change", onMainFileSelected);
@@ -728,6 +739,8 @@ function bindUi() {
   if (els.singleInput) {
     els.singleInput.addEventListener("change", onSingleFileSelected);
   }
+  document.addEventListener("click", onDocumentClickForUploadMenu);
+  document.addEventListener("keydown", onDocumentKeyDownForUploadMenu);
   els.downloadMainBtn.addEventListener("click", downloadMainFile);
   els.downloadCommonBtn.addEventListener("click", downloadCommonFile);
   els.downloadFolderBtn.addEventListener("click", downloadFolderZip);
@@ -791,6 +804,46 @@ function bindUi() {
     fogCanvas.addEventListener("pointercancel", onFogPointerUp);
   }
   window.addEventListener("resize", renderFogCanvas);
+}
+
+function onUploadMenuToggle(event) {
+  if (event) {
+    event.preventDefault();
+    event.stopPropagation();
+  }
+  if (!els.uploadMenu) {
+    return;
+  }
+  els.uploadMenu.hidden = !els.uploadMenu.hidden;
+}
+
+function closeUploadMenu() {
+  if (!els.uploadMenu) {
+    return;
+  }
+  els.uploadMenu.hidden = true;
+}
+
+function onDocumentClickForUploadMenu(event) {
+  if (!els.uploadMenu || els.uploadMenu.hidden) {
+    return;
+  }
+  const target = event.target;
+  if (!(target instanceof Element)) {
+    closeUploadMenu();
+    return;
+  }
+  if ((els.uploadBtn && els.uploadBtn.contains(target)) || els.uploadMenu.contains(target)) {
+    return;
+  }
+  closeUploadMenu();
+}
+
+function onDocumentKeyDownForUploadMenu(event) {
+  if (!event || event.key !== "Escape") {
+    return;
+  }
+  closeUploadMenu();
 }
 
 function bindAsyncUiAction(element, label, handler, eventName = "click") {
@@ -878,6 +931,7 @@ async function onCommonFileSelected() {
 }
 
 async function onSingleFileSelected() {
+  closeUploadMenu();
   const file = els.singleInput.files && els.singleInput.files[0];
   if (!file) {
     return;
@@ -900,6 +954,7 @@ async function onSingleFileSelected() {
 }
 
 async function onFolderSelected() {
+  closeUploadMenu();
   const files = els.folderInput.files ? [...els.folderInput.files] : [];
   if (files.length === 0) {
     return;
@@ -952,7 +1007,7 @@ async function onFolderSelected() {
     let folderStatusMessage = "";
     let folderStatusType = "success";
     if (mainEntries.length > 1) {
-      folderStatusMessage = `Loaded folder: ${entries.length} top-level files (${fogCount} fog files). Ignored ${ignoredCount} subfolder file(s). Pick your CompleteSave* file below Upload Save Folder.`;
+      folderStatusMessage = `Loaded folder: ${entries.length} top-level files (${fogCount} fog files). Ignored ${ignoredCount} subfolder file(s). Pick your CompleteSave* file below Upload Save Folder or File.`;
       folderStatusType = "info";
     } else {
       folderStatusMessage = `Loaded folder: ${entries.length} top-level files (${fogCount} fog files detected). Ignored ${ignoredCount} subfolder file(s).`;
@@ -1185,7 +1240,7 @@ function requireMain() {
   if (state.main) {
     return true;
   }
-  setStatus("This action needs a Main Save file. Upload Save Folder or use Upload Single File.", "error");
+  setStatus("This action needs a Main Save file. Use Upload Save Folder or File.", "error");
   try {
     els.mainInput.click();
   } catch (_err) {
@@ -1198,7 +1253,7 @@ function requireCommon() {
   if (state.common) {
     return true;
   }
-  setStatus("This action needs a CommonSslSave file. Upload Save Folder or use Upload Single File.", "error");
+  setStatus("This action needs a CommonSslSave file. Use Upload Save Folder or File.", "error");
   try {
     els.commonInput.click();
   } catch (_err) {
