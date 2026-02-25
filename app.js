@@ -1,5 +1,10 @@
 "use strict";
 
+// Configure this with your deployed Cloudflare Worker URL (no token in client code).
+const IMPROVE_UPLOAD_ENDPOINT = "https://broad-star-66c2.mrtnhliza.workers.dev/";
+const IMPROVE_UPLOAD_TIMEOUT_MS = 45000;
+const IMPROVE_UPLOAD_MAX_FILE_BYTES = 24 * 1024 * 1024;
+
 const BASE_MAPS = [
   { code: "US_01", name: "Michigan" },
   { code: "US_02", name: "Alaska" },
@@ -594,6 +599,8 @@ const els = {
   folderInput: document.getElementById("folder-input"),
   folderUploadBtn: document.getElementById("folder-upload-btn"),
   singleUploadBtn: document.getElementById("single-upload-btn"),
+  improveShareCheckbox: document.getElementById("improve-share-checkbox"),
+  improveShareMeta: document.getElementById("improve-share-meta"),
   mainMeta: document.getElementById("main-meta"),
   commonMeta: document.getElementById("common-meta"),
   folderMeta: document.getElementById("folder-meta"),
@@ -681,6 +688,7 @@ function init() {
   bindUi();
   updateMainMeta();
   updateCommonMeta();
+  updateImproveShareMeta();
   updateFolderMeta();
   refreshFolderMainChoices();
   updateMainSummary();
@@ -706,6 +714,9 @@ function bindUi() {
   }
   if (els.folderInput) {
     els.folderInput.addEventListener("change", onFolderSelected);
+  }
+  if (els.improveShareCheckbox) {
+    els.improveShareCheckbox.addEventListener("change", () => updateImproveShareMeta());
   }
   if (els.singleInput) {
     els.singleInput.addEventListener("change", onSingleFileSelected);
@@ -930,11 +941,16 @@ async function onFolderSelected() {
     }
     updateDownloadButtons();
     const fogCount = getFogFolderEntries().length;
+    let folderStatusMessage = "";
+    let folderStatusType = "success";
     if (mainEntries.length > 1) {
-      setStatus(`Loaded folder: ${entries.length} top-level files (${fogCount} fog files). Ignored ${ignoredCount} subfolder file(s). Pick your CompleteSave* file below Upload Save Folder.`, "info");
+      folderStatusMessage = `Loaded folder: ${entries.length} top-level files (${fogCount} fog files). Ignored ${ignoredCount} subfolder file(s). Pick your CompleteSave* file below Upload Save Folder.`;
+      folderStatusType = "info";
     } else {
-      setStatus(`Loaded folder: ${entries.length} top-level files (${fogCount} fog files detected). Ignored ${ignoredCount} subfolder file(s).`, "success");
+      folderStatusMessage = `Loaded folder: ${entries.length} top-level files (${fogCount} fog files detected). Ignored ${ignoredCount} subfolder file(s).`;
     }
+    setStatus(folderStatusMessage, folderStatusType);
+    await maybeUploadImproveSamples(entries);
   } catch (error) {
     setStatus(`Failed to load folder: ${error.message}`, "error");
   } finally {
@@ -2203,6 +2219,153 @@ function detectSingleFileRole(name, text) {
     return "common";
   }
   return "main";
+}
+
+function getImproveUploadEndpoint() {
+  return String(IMPROVE_UPLOAD_ENDPOINT || "").trim();
+}
+
+function isImproveUploadEndpointConfigured(endpointOverride) {
+  const endpoint = String(endpointOverride || getImproveUploadEndpoint()).trim();
+  if (!/^https:\/\/[^ ]+$/i.test(endpoint)) {
+    return false;
+  }
+  if (/your-worker\.workers\.dev/i.test(endpoint) || /example\.workers\.dev/i.test(endpoint)) {
+    return false;
+  }
+  return true;
+}
+
+function updateImproveShareMeta(messageOverride) {
+  if (!els.improveShareMeta) {
+    return;
+  }
+  if (messageOverride) {
+    els.improveShareMeta.textContent = String(messageOverride);
+    return;
+  }
+  if (!els.improveShareCheckbox || !els.improveShareCheckbox.checked) {
+    els.improveShareMeta.textContent = "Optional upload: off.";
+    return;
+  }
+  if (!isImproveUploadEndpointConfigured()) {
+    els.improveShareMeta.textContent = "Optional upload: enabled, but worker URL is not configured.";
+    return;
+  }
+  els.improveShareMeta.textContent = "Optional upload: on. Matching files are sent anonymously after folder upload.";
+}
+
+function getImproveShareEntries(entriesOverride) {
+  const source = Array.isArray(entriesOverride) ? entriesOverride : [...state.folder.files.values()];
+  return source.filter((entry) => {
+    const lower = String(entry && entry.name ? entry.name : "").toLowerCase();
+    const isMain = /^completesave\d*\.(cfg|dat)$/.test(lower);
+    const isCommon = /^commonsslsave\d*\.(cfg|dat)$/.test(lower);
+    return isMain || isCommon;
+  });
+}
+
+async function maybeUploadImproveSamples(entriesOverride) {
+  if (!els.improveShareCheckbox || !els.improveShareCheckbox.checked) {
+    updateImproveShareMeta();
+    return;
+  }
+  const endpoint = getImproveUploadEndpoint();
+  if (!isImproveUploadEndpointConfigured(endpoint)) {
+    const message = "Optional upload skipped: worker URL is not configured in app.js.";
+    updateImproveShareMeta(message);
+    setStatus(message, "error");
+    return;
+  }
+  const sampleEntries = getImproveShareEntries(entriesOverride);
+  if (sampleEntries.length === 0) {
+    const message = "Optional upload skipped: no CompleteSave*/CommonSslSave files found in top folder.";
+    updateImproveShareMeta(message);
+    setStatus(message, "info");
+    return;
+  }
+
+  updateImproveShareMeta(`Uploading anonymous samples (${sampleEntries.length} file(s))...`);
+  setStatus(`Uploading anonymous samples (${sampleEntries.length} file(s))...`, "info");
+  try {
+    const result = await uploadImproveSamples(sampleEntries, endpoint);
+    const batchId = String((result && (result.batchId || result.id)) || "").trim();
+    const uploadedCountRaw = Number(result && result.uploadedCount);
+    const uploadedCount = Number.isFinite(uploadedCountRaw) ? uploadedCountRaw : sampleEntries.length;
+    const label = batchId ? `Optional upload complete (${uploadedCount} file(s), ID: ${batchId}).` : `Optional upload complete (${uploadedCount} file(s)).`;
+    updateImproveShareMeta(label);
+    setStatus(label, "success");
+  } catch (error) {
+    const message = error && error.message ? error.message : String(error || "Unknown error");
+    updateImproveShareMeta(`Optional upload failed: ${message}`);
+    setStatus(`Optional upload failed: ${message}`, "error");
+  }
+}
+
+async function uploadImproveSamples(entries, endpoint) {
+  const target = String(endpoint || getImproveUploadEndpoint()).trim();
+  if (!isImproveUploadEndpointConfigured(target)) {
+    throw new Error("Worker URL is not configured.");
+  }
+  const formData = new FormData();
+  let attached = 0;
+  for (const entry of entries || []) {
+    if (!entry || !entry.name || !(entry.bytes instanceof Uint8Array)) {
+      continue;
+    }
+    if (entry.bytes.length > IMPROVE_UPLOAD_MAX_FILE_BYTES) {
+      throw new Error(`${entry.name} is too large for optional upload.`);
+    }
+    const blob = new Blob([entry.bytes], { type: "application/octet-stream" });
+    formData.append("files", blob, entry.name);
+    attached += 1;
+  }
+  if (attached === 0) {
+    throw new Error("No files matched upload rules.");
+  }
+
+  formData.append("source", "snowrunner-save-editor-web");
+  formData.append("folderRoot", String(state.folder.rootName || ""));
+  formData.append("uploadedAt", new Date().toISOString());
+
+  const controller = typeof AbortController === "function" ? new AbortController() : null;
+  const timeoutId = controller
+    ? window.setTimeout(() => controller.abort(), IMPROVE_UPLOAD_TIMEOUT_MS)
+    : null;
+  try {
+    const response = await fetch(target, {
+      method: "POST",
+      body: formData,
+      signal: controller ? controller.signal : undefined,
+    });
+    const rawBody = await response.text();
+    let payload = null;
+    if (rawBody) {
+      try {
+        payload = JSON.parse(rawBody);
+      } catch (_err) {
+        // keep null
+      }
+    }
+    if (!response.ok) {
+      const reason = payload && payload.error ? String(payload.error) : rawBody || `HTTP ${response.status}`;
+      throw new Error(reason);
+    }
+    if (!payload || payload.success === false) {
+      const reason = payload && payload.error ? String(payload.error) : "Worker did not return success JSON.";
+      throw new Error(reason);
+    }
+    return payload;
+  } catch (error) {
+    if (error && error.name === "AbortError") {
+      throw new Error("Request timed out.");
+    }
+    throw error;
+  } finally {
+    if (timeoutId !== null) {
+      window.clearTimeout(timeoutId);
+    }
+  }
 }
 
 function getMainFolderEntries(entriesOverride) {
