@@ -91,6 +91,11 @@ const RANK_XP_REQUIREMENTS = {
 
 const MONEY_MIN = -2147483647;
 const MONEY_MAX = 2147483647;
+const SAVE_VERSION_EXPECTED = {
+  objVersion: 9,
+  birthVersion: 9,
+  cfg_version: 1,
+};
 const DEFAULT_RECOVERY_PRICE = [0, 0, 2500, 5000, 8000, 5000, 2000];
 const DEFAULT_FULL_REPAIR_PRICE = [0, 0, 1500, 2500, 5000, 2500, 1500];
 const DEFAULT_SETTINGS_DICT = {
@@ -915,7 +920,7 @@ async function onMainFileSelected() {
   try {
     const text = await file.text();
     setMainFromText(file.name, text, null);
-    setStatus(`Loaded main save: ${file.name}`, "success");
+    setStatus(buildMainLoadStatus(`Loaded main save: ${file.name}`), "success");
   } catch (error) {
     setStatus(`Failed to read main save: ${error.message}`, "error");
   } finally {
@@ -953,7 +958,7 @@ async function onSingleFileSelected() {
       setStatus(`Loaded single file as CommonSslSave: ${file.name}`, "success");
     } else {
       setMainFromText(file.name, text, null);
-      setStatus(`Loaded single file as Main Save: ${file.name}`, "success");
+      setStatus(buildMainLoadStatus(`Loaded single file as Main Save: ${file.name}`), "success");
     }
     state.improveShare.preferredSource = "single";
     state.improveShare.lastUploadedSignature = "";
@@ -1032,6 +1037,10 @@ async function onFolderSelected() {
       folderStatusType = "info";
     } else {
       folderStatusMessage = `Loaded folder: ${entries.length} top-level files (${fogCount} fog files detected). Ignored ${ignoredCount} subfolder file(s).`;
+    }
+    const warningSuffix = getMainVersionWarningSuffix();
+    if (warningSuffix) {
+      folderStatusMessage += warningSuffix;
     }
     setStatus(folderStatusMessage, folderStatusType);
     await maybeUploadImproveSamples(entries);
@@ -1135,7 +1144,7 @@ function loadMainFromFolderKey(key) {
   try {
     const text = decodeBytesToText(entry.bytes);
     setMainFromText(entry.name, text, entry.key);
-    setStatus(`Active main save switched to ${entry.name}`, "success");
+    setStatus(buildMainLoadStatus(`Active main save switched to ${entry.name}`), "success");
   } catch (error) {
     setStatus(`Failed to load selected main save: ${error.message}`, "error");
   }
@@ -1143,11 +1152,13 @@ function loadMainFromFolderKey(key) {
 
 function setMainFromText(name, text, folderKey) {
   const slotIndex = extractCompleteSaveIndex(name);
+  const versionDiffs = readSaveVersionDiffs(text);
   state.main = {
     name,
     text,
     dirty: false,
     folderKey: folderKey || null,
+    versionDiffs,
   };
   const slotNumber = slotIndex + 1;
   if (els.fogSlotSelect && Number.isInteger(slotNumber) && slotNumber >= 1 && slotNumber <= 4) {
@@ -1160,6 +1171,38 @@ function setMainFromText(name, text, folderKey) {
   updateMainSummary();
   refreshFolderMainChoices();
   updateDownloadButtons();
+}
+
+function buildMainLoadStatus(prefix) {
+  return `${prefix}${getMainVersionWarningSuffix()}`;
+}
+
+function getMainVersionWarningSuffix() {
+  if (!state.main || !Array.isArray(state.main.versionDiffs) || state.main.versionDiffs.length === 0) {
+    return "";
+  }
+  return ` | Version warning: ${state.main.versionDiffs.join("; ")}`;
+}
+
+function readSaveVersionDiffs(content) {
+  const diffs = [];
+  for (const [key, expected] of Object.entries(SAVE_VERSION_EXPECTED)) {
+    const re = new RegExp(`"${escapeRegExp(key)}"\\s*:\\s*(-?\\d+)`, "i");
+    const m = re.exec(content);
+    if (!m) {
+      diffs.push(`${key}=missing (expected ${expected})`);
+      continue;
+    }
+    const value = Number.parseInt(m[1], 10);
+    if (!Number.isFinite(value)) {
+      diffs.push(`${key}=unreadable (expected ${expected})`);
+      continue;
+    }
+    if (value !== expected) {
+      diffs.push(`${key}=${value} (expected ${expected})`);
+    }
+  }
+  return diffs;
 }
 
 function setCommonFromText(name, text, folderKey) {
@@ -1299,6 +1342,7 @@ function commitMain(newText, message) {
   }
   state.main.text = newText;
   state.main.dirty = true;
+  state.main.versionDiffs = readSaveVersionDiffs(newText);
   syncMainToFolderEntry();
   updateMainMeta();
   updateMainSummary();
@@ -2948,7 +2992,8 @@ function parseGameStatsData(content) {
 function findBestDistanceBlock(content) {
   const matches = [...content.matchAll(/"distance"\s*:\s*\{/gi)];
   let best = null;
-  let bestCount = -1;
+  let bestKnownCount = -1;
+  let bestTotalCount = -1;
   for (const hit of matches) {
     try {
       const block = extractBraceBlock(content, hit.index);
@@ -2956,9 +3001,11 @@ function findBestDistanceBlock(content) {
       if (!parsed || typeof parsed !== "object" || Array.isArray(parsed)) {
         continue;
       }
-      const count = Object.keys(parsed).length;
-      if (count > bestCount) {
-        bestCount = count;
+      const knownCount = countKnownDistanceKeys(parsed);
+      const totalCount = Object.keys(parsed).length;
+      if (knownCount > bestKnownCount || (knownCount === bestKnownCount && totalCount > bestTotalCount)) {
+        bestKnownCount = knownCount;
+        bestTotalCount = totalCount;
         best = { ...block, parsed };
       }
     } catch (_err) {
@@ -2966,6 +3013,20 @@ function findBestDistanceBlock(content) {
     }
   }
   return best;
+}
+
+function countKnownDistanceKeys(parsed) {
+  if (!parsed || typeof parsed !== "object" || Array.isArray(parsed)) {
+    return 0;
+  }
+  let count = 0;
+  for (const key of Object.keys(parsed)) {
+    const up = String(key || "").toUpperCase();
+    if (REGION_ORDER.includes(up) || up === "TRIALS") {
+      count += 1;
+    }
+  }
+  return count;
 }
 
 function compareDistanceKey(a, b) {
