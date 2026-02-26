@@ -1,5 +1,3 @@
-@import url("https://fonts.googleapis.com/css2?family=Rajdhani:wght@400;500;600;700&family=Space+Mono:wght@400;700&display=swap");
-
 :root {
   --bg-0: #0f1519;
   --bg-1: #172026;
@@ -1038,7 +1036,20 @@ body {
 @media (max-width: 720px) {
   body {
     padding: 14px 10px 28px;
+    background: linear-gradient(160deg, var(--bg-0) 0%, var(--bg-1) 45%, var(--bg-0) 100%);
+    background-size: cover;
+    background-blend-mode: normal;
   }
+
+  .bg-orb {
+    display: none;
+  }
+
+  .app-shell,
+  .tab-panel.active {
+    animation: none;
+  }
+
 
   .app-shell {
     padding: 14px;
@@ -1128,5 +1139,12 @@ body {
 
   #fog-canvas {
     height: 380px;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after {
+    animation: none !important;
+    transition: none !important;
   }
 }
