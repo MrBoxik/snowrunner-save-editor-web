@@ -47,8 +47,12 @@
       ]
     }
   </script>
-  <link rel="icon" type="image/x-icon" href="./app_icon.ico">
-  <link rel="stylesheet" href="./styles.min.css?v=20260226-1">
+  <link rel="icon" href="./favicon.ico" sizes="any">
+  <link rel="shortcut icon" href="./favicon.ico">
+  <link rel="icon" type="image/png" sizes="48x48" href="./favicon-48x48.png">
+  <link rel="apple-touch-icon" sizes="180x180" href="./apple-touch-icon.png">
+  <link rel="manifest" href="./site.webmanifest">
+  <link rel="stylesheet" href="./styles.css?v=20260301-1">
 </head>
 <body>
   <div class="bg-orb orb-a"></div>
@@ -131,6 +135,7 @@
       <button class="tab-btn" data-tab="discoveries">Discoveries</button>
       <button class="tab-btn" data-tab="levels">Levels</button>
       <button class="tab-btn" data-tab="garages">Garages</button>
+      <button class="tab-btn" data-tab="vehicles">Vehicles</button>
       <button class="tab-btn" data-tab="fog">Fog Tools</button>
       <button class="tab-btn" data-tab="rules">Rules</button>
       <button class="tab-btn" data-tab="trials">Trials</button>
@@ -246,7 +251,7 @@
           </div>
         </div>
       </div>
-      <p class="help">Loads `objectiveStates` and lets you mark filtered entries as completed. Uses embedded objective catalog data only.</p>
+      <p class="help">Loads `objectiveStates` and supports desktop-like Objectives+ flows: complete, task accept, and task re-accept.</p>
       <div class="form-grid objectives-search-grid">
         <label>Search objective key/name <input id="objectives-search" type="text" placeholder="e.g. US_04_01 or Michigan"></label>
       </div>
@@ -277,7 +282,8 @@
         <button id="refresh-objectives-btn" class="btn">Refresh list</button>
         <button id="select-objectives-btn" class="btn">Select filtered</button>
         <button id="clear-objectives-btn" class="btn">Clear selection</button>
-        <button id="complete-objectives-btn" class="btn btn-primary">Complete selected</button>
+        <button id="accept-objectives-btn" class="btn">Accept selected tasks</button>
+        <button id="complete-objectives-btn" class="btn btn-primary">Apply changes</button>
       </div>
       <p id="objectives-info" class="help">No file loaded.</p>
       <div id="objectives-list" class="objectives-list"></div>
@@ -352,6 +358,59 @@
       <div id="garages-selector"></div>
       <label class="checkbox-line"><input id="garage-upgrade-all" type="checkbox"> Upgrade all garages (when possible)</label>
       <button id="unlock-garages-btn" class="btn btn-primary">Unlock Garages</button>
+    </section>
+
+    <section class="tab-panel" id="panel-vehicles">
+      <div class="panel-head">
+        <h3>Vehicles</h3>
+        <div class="tab-callouts">
+          <div class="tab-note is-warning">
+            <button type="button" class="tab-note-btn" aria-label="Warning for Vehicles">!</button>
+            <div class="tab-note-popover">Use with caution. This tab edits STS world-object data. Keep backups enabled and prefer small changes first.</div>
+          </div>
+        </div>
+      </div>
+      <p class="help">Edits vehicle/trailer positions from `sts_level_*.cfg/.dat` files for the currently selected save slot.</p>
+      <div class="form-grid vehicles-filter-grid">
+        <label>Type
+          <select id="vehicles-type">
+            <option value="">All types</option>
+            <option value="Vehicle">Vehicle</option>
+            <option value="Trailer">Trailer</option>
+          </select>
+        </label>
+        <label>Region
+          <select id="vehicles-region">
+            <option value="">All regions</option>
+          </select>
+        </label>
+        <label>Map
+          <select id="vehicles-map">
+            <option value="">All maps</option>
+          </select>
+        </label>
+      </div>
+      <div class="form-grid vehicles-edit-grid">
+        <label>Name search <input id="vehicles-search" type="text" placeholder="e.g. azov, trailer, taymyr"></label>
+        <label>Lift Y by <input id="vehicles-lift-input" type="number" step="0.1" value="2"></label>
+        <label>X / Y / Z (optional)
+          <div class="vehicles-xyz-row">
+            <input id="vehicles-x-input" type="number" step="0.01" placeholder="X">
+            <input id="vehicles-y-input" type="number" step="0.01" placeholder="Y">
+            <input id="vehicles-z-input" type="number" step="0.01" placeholder="Z">
+          </div>
+        </label>
+      </div>
+      <div class="button-grid compact">
+        <button id="refresh-vehicles-btn" class="btn">Refresh STS list</button>
+        <button id="vehicles-select-filtered-btn" class="btn">Select filtered</button>
+        <button id="vehicles-clear-selection-btn" class="btn">Clear selection</button>
+        <button id="vehicles-delete-selected-btn" class="btn">Delete selected</button>
+        <button id="vehicles-unstuck-btn" class="btn">Unstuck selected (+Y)</button>
+        <button id="vehicles-apply-xyz-btn" class="btn btn-primary">Apply Custom XYZ</button>
+      </div>
+      <p id="vehicles-info" class="help">Upload a save folder to load STS files.</p>
+      <div id="vehicles-list" class="vehicles-list"></div>
     </section>
 
     <section class="tab-panel" id="panel-fog">
@@ -487,6 +546,6 @@
   </aside>
 
   <script defer src="./assets/safe-defaults.min.js?v=20260226-1"></script>
-  <script defer src="./app.min.js?v=20260226-1"></script>
+  <script defer src="./app.js?v=20260301-1"></script>
 </body>
 </html>

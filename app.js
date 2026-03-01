@@ -633,6 +633,7 @@ const state = {
   objectives: {
     data: null,
     selected: new Set(),
+    reaccept: new Set(),
     visibleKeys: [],
     finishedInSave: new Set(),
     catalogKeys: new Set(),
@@ -677,6 +678,15 @@ const state = {
     viewOffsetX: 0,
     viewOffsetY: 0,
     seasonChecks: new Map(),
+  },
+  vehicles: {
+    entries: [],
+    visibleEntryIds: [],
+    selected: new Set(),
+    files: new Map(),
+    loading: false,
+    loadedSlot: 0,
+    loadedForFolder: "",
   },
   trialChecks: new Map(),
 };
@@ -723,6 +733,7 @@ const els = {
   refreshObjectivesBtn: document.getElementById("refresh-objectives-btn"),
   selectObjectivesBtn: document.getElementById("select-objectives-btn"),
   clearObjectivesBtn: document.getElementById("clear-objectives-btn"),
+  acceptObjectivesBtn: document.getElementById("accept-objectives-btn"),
   completeObjectivesBtn: document.getElementById("complete-objectives-btn"),
   objectivesInfo: document.getElementById("objectives-info"),
   objectivesList: document.getElementById("objectives-list"),
@@ -758,6 +769,22 @@ const els = {
   fogCoverBtn: document.getElementById("fog-cover-btn"),
   fogUncoverBtn: document.getElementById("fog-uncover-btn"),
   fogAutoInfo: document.getElementById("fog-auto-info"),
+  vehiclesType: document.getElementById("vehicles-type"),
+  vehiclesRegion: document.getElementById("vehicles-region"),
+  vehiclesMap: document.getElementById("vehicles-map"),
+  vehiclesSearch: document.getElementById("vehicles-search"),
+  vehiclesLiftInput: document.getElementById("vehicles-lift-input"),
+  vehiclesXInput: document.getElementById("vehicles-x-input"),
+  vehiclesYInput: document.getElementById("vehicles-y-input"),
+  vehiclesZInput: document.getElementById("vehicles-z-input"),
+  refreshVehiclesBtn: document.getElementById("refresh-vehicles-btn"),
+  vehiclesSelectFilteredBtn: document.getElementById("vehicles-select-filtered-btn"),
+  vehiclesClearSelectionBtn: document.getElementById("vehicles-clear-selection-btn"),
+  vehiclesDeleteSelectedBtn: document.getElementById("vehicles-delete-selected-btn"),
+  vehiclesUnstuckBtn: document.getElementById("vehicles-unstuck-btn"),
+  vehiclesApplyXyzBtn: document.getElementById("vehicles-apply-xyz-btn"),
+  vehiclesInfo: document.getElementById("vehicles-info"),
+  vehiclesList: document.getElementById("vehicles-list"),
 };
 
 init();
@@ -784,6 +811,7 @@ function init() {
   updateMainSummary();
   refreshCommonTabs();
   refreshFogFileList();
+  renderVehiclesList();
   renderFogCanvas();
   checkRuntimeDependencies();
   scheduleAnalyticsInit();
@@ -840,6 +868,7 @@ function bindUi() {
   els.refreshObjectivesBtn.addEventListener("click", refreshObjectivesFromMain);
   els.selectObjectivesBtn.addEventListener("click", selectVisibleObjectives);
   els.clearObjectivesBtn.addEventListener("click", clearObjectiveSelection);
+  els.acceptObjectivesBtn.addEventListener("click", acceptSelectedObjectivesTasks);
   els.completeObjectivesBtn.addEventListener("click", completeSelectedObjectives);
   els.objectivesSearch.addEventListener("input", renderObjectivesList);
   els.objectivesType.addEventListener("change", renderObjectivesList);
@@ -865,6 +894,28 @@ function bindUi() {
   bindAsyncUiAction(els.fogFileSelect, "Open fog file", onOpenSelectedFogFile, "change");
   bindAsyncUiAction(els.fogCoverBtn, "Fog automation cover", () => runFogAutomation("cover"));
   bindAsyncUiAction(els.fogUncoverBtn, "Fog automation uncover", () => runFogAutomation("uncover"));
+  bindAsyncUiAction(els.refreshVehiclesBtn, "Refresh vehicles", () => loadVehiclesFromFolder(true));
+  bindAsyncUiAction(els.vehiclesUnstuckBtn, "Vehicles unstuck", onVehiclesUnstuckSelected);
+  bindAsyncUiAction(els.vehiclesApplyXyzBtn, "Vehicles apply XYZ", onVehiclesApplyCustomXyz);
+  bindAsyncUiAction(els.vehiclesDeleteSelectedBtn, "Vehicles delete", onVehiclesDeleteSelected);
+  if (els.vehiclesSelectFilteredBtn) {
+    els.vehiclesSelectFilteredBtn.addEventListener("click", selectVisibleVehicles);
+  }
+  if (els.vehiclesClearSelectionBtn) {
+    els.vehiclesClearSelectionBtn.addEventListener("click", clearVehicleSelection);
+  }
+  if (els.vehiclesType) {
+    els.vehiclesType.addEventListener("change", renderVehiclesList);
+  }
+  if (els.vehiclesRegion) {
+    els.vehiclesRegion.addEventListener("change", renderVehiclesList);
+  }
+  if (els.vehiclesMap) {
+    els.vehiclesMap.addEventListener("change", renderVehiclesList);
+  }
+  if (els.vehiclesSearch) {
+    els.vehiclesSearch.addEventListener("input", renderVehiclesList);
+  }
 
   const fogCanvas = els.fogCanvas;
   if (fogCanvas) {
@@ -1083,6 +1134,7 @@ async function onFolderSelected() {
     }
     state.folder.loaded = true;
     state.folder.rootName = detectFolderRoot(entries.map((item) => item.relPath));
+    invalidateVehiclesCache("Folder loaded. Open Vehicles tab or click Refresh STS list.");
     state.improveShare.preferredSource = "folder";
     state.improveShare.lastUploadedSignature = "";
     updateFolderMeta();
@@ -1120,6 +1172,9 @@ async function onFolderSelected() {
       folderStatusMessage += warningSuffix;
     }
     setStatus(folderStatusMessage, folderStatusType);
+    if (document.querySelector(".tab-btn.active")?.dataset?.tab === "vehicles") {
+      await loadVehiclesFromFolder(true);
+    }
     await maybeUploadImproveSamples(entries);
   } catch (error) {
     setStatus(`Failed to load folder: ${error.message}`, "error");
@@ -1146,6 +1201,9 @@ function activateTab(tab) {
     ensurePakoLoaded();
     refreshFogFileList();
     renderFogCanvas();
+  }
+  if (tab === "vehicles") {
+    loadVehiclesFromFolder(false);
   }
   if (tab === "trials" || tab === "pros" || tab === "achievements") {
     refreshCommonTabs();
@@ -1339,9 +1397,15 @@ function updateMainSummary() {
     els.gameStatList.innerHTML = "";
     state.objectives.data = null;
     state.objectives.selected.clear();
+    state.objectives.reaccept.clear();
     state.objectives.visibleKeys = [];
     renderObjectivesList();
     hydrateRulesFromMain();
+    if (state.vehicles.entries.length > 0) {
+      invalidateVehiclesCache("Load or select a CompleteSave file first.");
+    } else {
+      renderVehiclesList();
+    }
     return;
   }
   try {
@@ -1371,6 +1435,7 @@ function updateMainSummary() {
   refreshGameStatsEditor();
   refreshObjectivesFromMain();
   hydrateRulesFromMain();
+  refreshVehiclesSlotState();
 }
 
 function refreshCommonTabs() {
@@ -1510,6 +1575,1356 @@ function triggerBlobDownload(filename, blob) {
   a.remove();
   setTimeout(() => URL.revokeObjectURL(url), 0);
   setStatus(`Downloaded ${filename}`, "success");
+}
+
+const VEHICLE_KNOWN_TRUCK_IDS = new Set([
+  "ank_mk38",
+  "ank_mk38_ht",
+  "azov_5319",
+  "azov_64131",
+  "azov_73210",
+  "boar_45318",
+  "cat_745c",
+  "cat_ct680",
+  "chevrolet_ck1500",
+  "chevrolet_kodiakc70",
+  "dan_96320",
+  "derry_longhorn_3194",
+  "derry_longhorn_4520",
+  "ford_clt9000",
+  "freightliner_114sd",
+  "freightliner_m916a1",
+  "gmc_9500",
+  "hummer_h2",
+  "international_fleetstar_f2070a",
+  "international_loadstar_1700",
+  "international_paystar_5070",
+  "international_scout_800",
+  "international_transtar_4070a",
+  "kenworth_c500",
+  "khan_lo4f",
+  "kolob_74760",
+  "kolob_74941",
+  "mack_defense_m917",
+  "navistar_5000_mv",
+  "pacific_p12w",
+  "pacific_p16",
+  "royal_bm17",
+  "step_310e",
+  "tatra_t813",
+  "tatra_t815_7",
+  "tayga_6436",
+  "tuz_166",
+  "tuz_420_tatarin",
+  "voron_ae4380",
+  "voron_d53233",
+  "voron_grad",
+  "ws_4964_white",
+  "ws_6900xd_twin",
+  "yar_87",
+  "zikz_5368",
+  "zikz_612h_mastodont",
+]);
+
+const VEHICLE_BRAND_HINTS = new Set([
+  "ank", "azov", "boar", "cat", "chevrolet", "dan", "derry", "don", "femm", "ford",
+  "freightliner", "futom", "gmc", "hummer", "international", "jangsu", "jeep", "kenworth",
+  "khan", "kolob", "krs", "land", "mack", "navistar", "pacific", "rezvani", "royal", "step",
+  "tatra", "tayga", "tuz", "voron", "western", "chevy", "ws", "yar", "zikz", "aramatsu",
+  "burlak", "kirovets", "mercer", "neo", "sleiter",
+]);
+
+const VEHICLE_ID_BLOCKLIST_PARTS = [
+  "engine", "gearbox", "suspension", "wheels", "rim_", "tires", "tire", "transferbox",
+  "diff_lock", "bumper", "snorkel", "roofrack", "gabarite", "headlight", "horn", "paint",
+  "addon", "cabin", "grill", "cargo_", "bone", "sticker", "stuff_", "airfreshener",
+];
+
+const STS_COMPONENT_TYPE_BLOCKLIST_PARTS = [
+  "_default",
+  "_fender_",
+  "exhaust",
+  "threshold",
+  "treshhold",
+  "spotlight",
+  "lightbar",
+  "wheel_addon",
+  "wheel_default",
+  "diff_lock",
+  "mudguard",
+  "mud_guards",
+  "bumper_",
+  "paint_",
+  "decal_",
+];
+
+const GUID_TEXT_RE = /^\{[0-9a-fA-F-]{36}\}$/;
+
+function invalidateVehiclesCache(message) {
+  state.vehicles.entries = [];
+  state.vehicles.visibleEntryIds = [];
+  state.vehicles.selected.clear();
+  state.vehicles.files.clear();
+  state.vehicles.loading = false;
+  state.vehicles.loadedSlot = 0;
+  state.vehicles.loadedForFolder = "";
+  if (els.vehiclesInfo && message) {
+    els.vehiclesInfo.textContent = String(message);
+  }
+  renderVehiclesList();
+}
+
+function getCurrentSaveSlotNumber() {
+  if (!state.main || !state.main.name) {
+    return 1;
+  }
+  const idx = extractCompleteSaveIndex(state.main.name);
+  if (!Number.isFinite(idx) || idx < 0 || idx > 3) {
+    return 1;
+  }
+  return idx + 1;
+}
+
+function buildVehiclesFolderSignature() {
+  if (!state.folder.loaded) {
+    return "";
+  }
+  return `${String(state.folder.rootName || "").toLowerCase()}|${state.folder.files.size}`;
+}
+
+function refreshVehiclesSlotState() {
+  if (!state.vehicles.entries.length) {
+    renderVehiclesList();
+    return;
+  }
+  const slot = getCurrentSaveSlotNumber();
+  const folderSignature = buildVehiclesFolderSignature();
+  if (slot !== state.vehicles.loadedSlot || folderSignature !== state.vehicles.loadedForFolder) {
+    invalidateVehiclesCache("Main slot or folder changed. Open Vehicles tab or click Refresh STS list.");
+  }
+}
+
+function isStsFilenameForSlot(name, slot) {
+  const base = getFileBasename(name).toLowerCase();
+  if (!base.endsWith(".cfg") && !base.endsWith(".dat")) {
+    return false;
+  }
+  const prefix = slot <= 1 ? "" : `${slot - 1}_`;
+  return base.startsWith(`${prefix}sts_level_`);
+}
+
+function mapIdFromStsFilename(name) {
+  const base = getFileBasename(name);
+  const m = /^(?:\d+_)?sts_level_(.+?)\.(?:cfg|dat)$/i.exec(base);
+  if (!m) {
+    return "";
+  }
+  return String(m[1] || "").toUpperCase();
+}
+
+function normalizeMapId(raw) {
+  let text = String(raw || "").trim().toUpperCase();
+  if (text.startsWith("LEVEL_")) {
+    text = text.slice(6);
+  }
+  return text;
+}
+
+function regionCodeFromMapId(mapId) {
+  const mid = normalizeMapId(mapId);
+  const parts = mid.split("_").filter(Boolean);
+  if (parts.length >= 2 && (parts[0] === "US" || parts[0] === "RU") && /^[0-9]+$/.test(parts[1])) {
+    return `${parts[0]}_${parts[1]}`;
+  }
+  if (parts.length > 0 && parts[0] === "TRIAL") {
+    return "TRIALS";
+  }
+  return "";
+}
+
+function regionNameFromCode(code) {
+  const key = String(code || "").trim().toUpperCase();
+  if (!key) {
+    return "";
+  }
+  if (Object.prototype.hasOwnProperty.call(REGION_LONG_NAME_MAP, key)) {
+    return REGION_LONG_NAME_MAP[key];
+  }
+  if (key === "TRIALS") {
+    return "Trials";
+  }
+  return key;
+}
+
+function mapHumanizeSlug(value) {
+  const token = String(value || "").trim().replace(/[-_]+/g, " ");
+  return token
+    .split(" ")
+    .filter(Boolean)
+    .map((part) => part.charAt(0).toUpperCase() + part.slice(1).toLowerCase())
+    .join(" ");
+}
+
+function mapDisplayInfo(mapIdRaw) {
+  const mapId = normalizeMapId(mapIdRaw);
+  const regionCode = regionCodeFromMapId(mapId);
+  const regionName = regionNameFromCode(regionCode);
+  const prettyMapName = mapHumanizeSlug(mapId) || mapId;
+  return {
+    mapId,
+    regionCode,
+    regionName: regionName || regionCode || "",
+    mapName: prettyMapName,
+  };
+}
+
+function vehicleHumanizeTypeId(rawTypeId) {
+  const text = String(rawTypeId || "").trim();
+  if (!text) {
+    return "";
+  }
+  if (GUID_TEXT_RE.test(text)) {
+    return text;
+  }
+  let token = text.split("/").pop() || text;
+  token = token.replace(/[_-]+/g, " ").replace(/\s+/g, " ").trim();
+  if (!token) {
+    return text;
+  }
+  return token
+    .split(" ")
+    .map((word) => (/^[0-9]+$/.test(word) ? word : `${word.charAt(0).toUpperCase()}${word.slice(1).toLowerCase()}`))
+    .join(" ");
+}
+
+function isProbableTruckTypeId(typeIdRaw) {
+  const typeId = String(typeIdRaw || "").trim().toLowerCase();
+  if (!typeId || typeId.includes("trailer")) {
+    return false;
+  }
+  if (!/^[a-z0-9_\-./]+$/.test(typeId)) {
+    return false;
+  }
+  const base = typeId.split("/", 1)[0];
+  for (const blocked of [...VEHICLE_ID_BLOCKLIST_PARTS, ...STS_COMPONENT_TYPE_BLOCKLIST_PARTS]) {
+    if (base.includes(blocked)) {
+      return false;
+    }
+  }
+  if (VEHICLE_KNOWN_TRUCK_IDS.has(base)) {
+    return true;
+  }
+  const parts = base.split(/[_-]+/).filter(Boolean);
+  return parts.length > 0 && VEHICLE_BRAND_HINTS.has(parts[0]);
+}
+
+function isVehicleOrTrailerType(typeIdRaw, objectIdRaw = "") {
+  const typeId = String(typeIdRaw || "").trim().toLowerCase();
+  if (!typeId) {
+    return false;
+  }
+  const base = typeId.split("/", 1)[0];
+  if (!/^[a-z0-9_\-./]+$/.test(typeId) || base.length < 3) {
+    return false;
+  }
+  if (base === "skin" || base.startsWith("skin_")) {
+    return false;
+  }
+  if (/^(?:[a-z]{2,4}_)?(?:truck|scout)_old_engine_[a-z0-9_]+$/.test(base)) {
+    return true;
+  }
+  for (const blocked of STS_COMPONENT_TYPE_BLOCKLIST_PARTS) {
+    if (base.includes(blocked)) {
+      return false;
+    }
+  }
+  if (typeId.includes("trailer")) {
+    return true;
+  }
+  for (const blocked of VEHICLE_ID_BLOCKLIST_PARTS) {
+    if (base.includes(blocked)) {
+      return false;
+    }
+  }
+  const objectId = String(objectIdRaw || "").trim();
+  const objectLower = objectId.toLowerCase();
+  if (objectLower.startsWith("bone") || objectLower.endsWith("_cdt")) {
+    return false;
+  }
+  if (base.startsWith("g_") && base.endsWith("_default")) {
+    return false;
+  }
+  if (VEHICLE_KNOWN_TRUCK_IDS.has(base)) {
+    return true;
+  }
+  const parts = base.split(/[_-]+/).filter(Boolean);
+  if (parts.length > 0 && VEHICLE_BRAND_HINTS.has(parts[0])) {
+    return true;
+  }
+  if (GUID_TEXT_RE.test(objectId)) {
+    return true;
+  }
+  const upperObject = objectId.toUpperCase();
+  return upperObject.includes("TRUCK") || upperObject.includes("SCOUT") || upperObject.includes("TRAILER");
+}
+
+function isDenormFloat(value) {
+  const v = Math.abs(Number(value));
+  return Number.isFinite(v) && v > 0 && v < 1e-20;
+}
+
+function stsHasValidTransformAt(bytes, coordOff) {
+  const data = bytes instanceof Uint8Array ? bytes : new Uint8Array(bytes || []);
+  if (!Number.isInteger(coordOff) || coordOff < 32 || coordOff + 12 > data.length) {
+    return false;
+  }
+  const view = new DataView(data.buffer, data.byteOffset, data.byteLength);
+  const vals = [];
+  for (let i = 0; i < 8; i += 1) {
+    vals.push(view.getFloat32(coordOff - 32 + (i * 4), true));
+  }
+  if (!vals.every((v) => Number.isFinite(v))) {
+    return false;
+  }
+  const n1 = Math.sqrt((vals[0] ** 2) + (vals[1] ** 2) + (vals[2] ** 2) + (vals[3] ** 2));
+  const n2 = Math.sqrt((vals[4] ** 2) + (vals[5] ** 2) + (vals[6] ** 2) + (vals[7] ** 2));
+  return n1 >= 0.75 && n1 <= 1.25 && n2 >= 0.75 && n2 <= 1.25;
+}
+
+function readAsciiText(data, beg, endInclusiveNull) {
+  const end = Math.max(beg, endInclusiveNull - 1);
+  if (beg < 0 || end > data.length || end <= beg) {
+    return "";
+  }
+  const raw = data.subarray(beg, end);
+  for (let i = 0; i < raw.length; i += 1) {
+    const b = raw[i];
+    if (b < 32 || b > 126) {
+      return "";
+    }
+  }
+  return new TextDecoder("ascii").decode(raw).trim();
+}
+
+function parseStsGuidVehicleBlocks(data, sourceFile, existingObjects) {
+  const payload = data instanceof Uint8Array ? data : new Uint8Array(data || []);
+  const size = payload.length;
+  if (size < 96) {
+    return [];
+  }
+  const view = new DataView(payload.buffer, payload.byteOffset, payload.byteLength);
+  const mapInfo = mapDisplayInfo(mapIdFromStsFilename(sourceFile));
+  const hits = [];
+
+  for (let i = 0; i < size - 24; i += 1) {
+    const typeLen = view.getUint16(i, true);
+    if (typeLen < 3 || typeLen > 128) {
+      continue;
+    }
+    const typeBeg = i + 2;
+    const typeEnd = typeBeg + typeLen;
+    if (typeEnd + 5 >= size || payload[typeEnd - 1] !== 0) {
+      continue;
+    }
+    const typeId = readAsciiText(payload, typeBeg, typeEnd);
+    if (!typeId) {
+      continue;
+    }
+    const objLen = view.getUint16(typeEnd, true);
+    if (objLen !== 1) {
+      continue;
+    }
+    const objBeg = typeEnd + 2;
+    const objEnd = objBeg + objLen;
+    if (objEnd + 2 >= size || payload[objEnd - 1] !== 0) {
+      continue;
+    }
+    const guidLen = view.getUint16(objEnd, true);
+    if (guidLen < 3 || guidLen > 80) {
+      continue;
+    }
+    const guidBeg = objEnd + 2;
+    const guidEnd = guidBeg + guidLen;
+    if (guidEnd > size || payload[guidEnd - 1] !== 0) {
+      continue;
+    }
+    const guid = readAsciiText(payload, guidBeg, guidEnd);
+    if (!GUID_TEXT_RE.test(guid) || guid.toUpperCase() === "{00000000-0000-0000-0000-000000000000}") {
+      continue;
+    }
+    if (!isVehicleOrTrailerType(typeId, guid)) {
+      continue;
+    }
+    hits.push({
+      startOff: i,
+      typeId,
+      guid,
+      typeBeg,
+      typeEnd,
+      objBeg,
+      objEnd,
+      guidBeg,
+      guidEnd,
+      afterGuidOff: guidEnd,
+    });
+  }
+
+  if (hits.length === 0) {
+    return [];
+  }
+
+  hits.sort((a, b) => a.startOff - b.startOff);
+  const out = [];
+  const existing = Array.isArray(existingObjects) ? [...existingObjects] : [];
+
+  for (let idx = 0; idx < hits.length; idx += 1) {
+    const hit = hits[idx];
+    const blockStart = hit.afterGuidOff;
+    const blockEnd = idx + 1 < hits.length ? hits[idx + 1].startOff : Math.min(size, blockStart + 24000);
+    if (blockEnd <= blockStart + 64) {
+      continue;
+    }
+
+    const candidates = [];
+    for (let coordOff = blockStart + 32; coordOff < Math.min(blockEnd, size - 12); coordOff += 1) {
+      const x = view.getFloat32(coordOff, true);
+      const y = view.getFloat32(coordOff + 4, true);
+      const z = view.getFloat32(coordOff + 8, true);
+      if (!Number.isFinite(x) || !Number.isFinite(y) || !Number.isFinite(z)) {
+        continue;
+      }
+      if (Math.max(Math.abs(x), Math.abs(y), Math.abs(z)) > 5000) {
+        continue;
+      }
+      if (isDenormFloat(x) || isDenormFloat(y) || isDenormFloat(z)) {
+        continue;
+      }
+      if (Math.max(Math.abs(x), Math.abs(y), Math.abs(z)) < 20) {
+        continue;
+      }
+      if (!stsHasValidTransformAt(payload, coordOff)) {
+        continue;
+      }
+      if (coordOff < 4 || coordOff + 16 > size) {
+        continue;
+      }
+      const prevW = view.getFloat32(coordOff - 4, true);
+      const rowW = view.getFloat32(coordOff + 12, true);
+      if (!Number.isFinite(prevW) || !Number.isFinite(rowW)) {
+        continue;
+      }
+      if (Math.abs(prevW) > 0.25 || Math.abs(rowW - 1) > 0.25) {
+        continue;
+      }
+      candidates.push([coordOff, x, y, z]);
+    }
+    if (candidates.length === 0) {
+      continue;
+    }
+
+    const buckets = new Map();
+    for (const item of candidates) {
+      const key = `${Math.round(item[1] * 10) / 10}|${Math.round(item[2] * 10) / 10}|${Math.round(item[3] * 10) / 10}`;
+      if (!buckets.has(key)) {
+        buckets.set(key, []);
+      }
+      buckets.get(key).push(item);
+    }
+    let bestBucket = [];
+    for (const bucket of buckets.values()) {
+      if (bucket.length > bestBucket.length) {
+        bestBucket = bucket;
+      }
+    }
+    if (bestBucket.length === 0) {
+      continue;
+    }
+    let anchor = bestBucket[0];
+    for (const cand of bestBucket) {
+      if (Math.abs(cand[0] - hit.startOff) < Math.abs(anchor[0] - hit.startOff)) {
+        anchor = cand;
+      }
+    }
+    const coordOffs = [...new Set(bestBucket.map((x) => Number(x[0])))]
+      .sort((a, b) => a - b);
+    const anchorOff = Number(anchor[0]);
+
+    let duplicate = false;
+    for (const ex of existing) {
+      const exOid = String(ex.objectId || "").trim().toLowerCase();
+      if (exOid && exOid === String(hit.guid).toLowerCase()) {
+        duplicate = true;
+        break;
+      }
+    }
+    if (duplicate) {
+      continue;
+    }
+
+    const typeId = String(hit.typeId || "");
+    const isTrailer = typeId.toLowerCase().includes("trailer");
+    const obj = {
+      id: `${String(sourceFile).toLowerCase()}|${hit.startOff}|${anchorOff}|guid`,
+      file: getFileBasename(sourceFile),
+      fileKey: String(sourceFile).toLowerCase(),
+      mapId: mapInfo.mapId,
+      mapName: mapInfo.mapName,
+      regionCode: mapInfo.regionCode,
+      regionName: mapInfo.regionName,
+      kind: isTrailer ? "Trailer" : "Vehicle",
+      typeId,
+      name: vehicleHumanizeTypeId(typeId),
+      objectId: hit.guid,
+      guid: hit.guid,
+      startOff: hit.startOff,
+      typeBeg: hit.typeBeg,
+      typeEnd: hit.typeEnd,
+      objBeg: hit.objBeg,
+      objEnd: hit.objEnd,
+      guidBeg: hit.guidBeg,
+      guidEnd: hit.guidEnd,
+      coordOff: anchorOff,
+      coordOffs,
+      endOff: blockEnd,
+      x: Number(anchor[1]),
+      y: Number(anchor[2]),
+      z: Number(anchor[3]),
+    };
+    out.push(obj);
+    existing.push(obj);
+  }
+  return out;
+}
+
+function parseStsMovableObjects(payload, sourceFile) {
+  const data = payload instanceof Uint8Array ? payload : new Uint8Array(payload || []);
+  const size = data.length;
+  if (size < 96) {
+    return [];
+  }
+  const view = new DataView(data.buffer, data.byteOffset, data.byteLength);
+  const out = [];
+  const seen = new Set();
+  const mapInfo = mapDisplayInfo(mapIdFromStsFilename(sourceFile));
+  const minTail = 60;
+
+  function readValidCoord(off) {
+    if (off < 0 || off + 12 > size) {
+      return null;
+    }
+    const x = view.getFloat32(off, true);
+    const y = view.getFloat32(off + 4, true);
+    const z = view.getFloat32(off + 8, true);
+    if (!Number.isFinite(x) || !Number.isFinite(y) || !Number.isFinite(z)) {
+      return null;
+    }
+    if (Math.max(Math.abs(x), Math.abs(y), Math.abs(z)) > 5000000) {
+      return null;
+    }
+    if (isDenormFloat(x) || isDenormFloat(y) || isDenormFloat(z)) {
+      return null;
+    }
+    if (Math.max(Math.abs(x), Math.abs(y), Math.abs(z)) < 20) {
+      return null;
+    }
+    if (!stsHasValidTransformAt(data, off)) {
+      return null;
+    }
+    if (off < 4 || off + 16 > size) {
+      return null;
+    }
+    const prevW = view.getFloat32(off - 4, true);
+    const rowW = view.getFloat32(off + 12, true);
+    if (!Number.isFinite(prevW) || !Number.isFinite(rowW)) {
+      return null;
+    }
+    if (Math.abs(prevW) > 0.25 || Math.abs(rowW - 1) > 0.25) {
+      return null;
+    }
+    return [x, y, z];
+  }
+
+  function tryParseAt(offset, lenSize) {
+    const need = lenSize + 3 + lenSize + 1 + minTail;
+    if (offset + need > size) {
+      return null;
+    }
+    const typeLen = lenSize === 2 ? view.getUint16(offset, true) : view.getUint32(offset, true);
+    if (typeLen < 3 || typeLen > 128) {
+      return null;
+    }
+    const typeBeg = offset + lenSize;
+    const typeEnd = typeBeg + typeLen;
+    if (typeEnd + lenSize + 1 + minTail > size || data[typeEnd - 1] !== 0) {
+      return null;
+    }
+    const typeId = readAsciiText(data, typeBeg, typeEnd);
+    if (!typeId || typeId.toLowerCase().startsWith("deleted_")) {
+      return null;
+    }
+    const objLen = lenSize === 2 ? view.getUint16(typeEnd, true) : view.getUint32(typeEnd, true);
+    if (objLen < 1 || objLen > 196) {
+      return null;
+    }
+    const objBeg = typeEnd + lenSize;
+    const objEnd = objBeg + objLen;
+    if (objEnd + minTail > size || data[objEnd - 1] !== 0) {
+      return null;
+    }
+    const objectId = readAsciiText(data, objBeg, objEnd);
+    if (objectId && (objectId.toLowerCase().startsWith("bone") || objectId.toLowerCase().endsWith("_cdt"))) {
+      return null;
+    }
+
+    let guidBeg = -1;
+    let guidEnd = -1;
+    let guidValue = "";
+    try {
+      const guidLen = lenSize === 2 ? view.getUint16(objEnd, true) : view.getUint32(objEnd, true);
+      if (guidLen >= 3 && guidLen <= 80) {
+        const gb = objEnd + lenSize;
+        const ge = gb + guidLen;
+        if (ge <= size && data[ge - 1] === 0) {
+          const guidCandidate = readAsciiText(data, gb, ge);
+          if (GUID_TEXT_RE.test(guidCandidate) && guidCandidate.toUpperCase() !== "{00000000-0000-0000-0000-000000000000}") {
+            guidBeg = gb;
+            guidEnd = ge;
+            guidValue = guidCandidate;
+          }
+        }
+      }
+    } catch (_error) {
+      // ignore optional guid parse errors
+    }
+
+    const objectOrGuid = guidValue || objectId;
+    if (!objectOrGuid) {
+      return null;
+    }
+    if (objectId.toLowerCase().startsWith("deleted_entry_") && !guidValue) {
+      return null;
+    }
+    if (!isVehicleOrTrailerType(typeId, objectOrGuid)) {
+      return null;
+    }
+
+    let coordOff = -1;
+    let xyz = null;
+    const base = objEnd + 48;
+    const candidates = [base, base - 4, base + 4, base - 8, base + 8, base - 12, base + 12, base - 16, base + 16];
+    for (const cand of candidates) {
+      const parsed = readValidCoord(cand);
+      if (!parsed) {
+        continue;
+      }
+      coordOff = cand;
+      xyz = parsed;
+      break;
+    }
+    if (coordOff < 0) {
+      const scanBeg = Math.max(32, objEnd + 16);
+      const scanEnd = Math.min(size - 12, objEnd + 8192);
+      for (let cand = scanBeg; cand < scanEnd; cand += 1) {
+        const parsed = readValidCoord(cand);
+        if (!parsed) {
+          continue;
+        }
+        coordOff = cand;
+        xyz = parsed;
+        break;
+      }
+    }
+    if (coordOff < 0 || !xyz) {
+      return null;
+    }
+
+    return {
+      typeId,
+      objectId,
+      startOff: offset,
+      typeBeg,
+      typeEnd,
+      objBeg,
+      objEnd,
+      guid: guidValue,
+      guidBeg,
+      guidEnd,
+      coordOff,
+      x: xyz[0],
+      y: xyz[1],
+      z: xyz[2],
+      nextOff: objEnd,
+      entryMinEnd: coordOff + 12,
+    };
+  }
+
+  let i = 0;
+  while (i + 8 + minTail <= size) {
+    let parsed = tryParseAt(i, 2);
+    if (!parsed) {
+      parsed = tryParseAt(i, 4);
+    }
+    if (!parsed) {
+      i += 1;
+      continue;
+    }
+
+    const key = `${parsed.coordOff}|${parsed.typeId}|${parsed.objectId}`;
+    if (!seen.has(key)) {
+      seen.add(key);
+      const kind = parsed.typeId.toLowerCase().includes("trailer") || String(parsed.objectId || "").toUpperCase().includes("TRAILER")
+        ? "Trailer"
+        : "Vehicle";
+      out.push({
+        id: `${String(sourceFile).toLowerCase()}|${parsed.startOff}|${parsed.coordOff}|movable`,
+        file: getFileBasename(sourceFile),
+        fileKey: String(sourceFile).toLowerCase(),
+        mapId: mapInfo.mapId,
+        mapName: mapInfo.mapName,
+        regionCode: mapInfo.regionCode,
+        regionName: mapInfo.regionName,
+        kind,
+        typeId: parsed.typeId,
+        name: vehicleHumanizeTypeId(parsed.typeId),
+        objectId: parsed.objectId,
+        guid: parsed.guid || "",
+        startOff: parsed.startOff,
+        typeBeg: parsed.typeBeg,
+        typeEnd: parsed.typeEnd,
+        objBeg: parsed.objBeg,
+        objEnd: parsed.objEnd,
+        guidBeg: parsed.guidBeg,
+        guidEnd: parsed.guidEnd,
+        coordOff: parsed.coordOff,
+        coordOffs: [parsed.coordOff],
+        endOff: parsed.entryMinEnd,
+        x: parsed.x,
+        y: parsed.y,
+        z: parsed.z,
+      });
+    }
+    i = Math.max(i + 1, parsed.nextOff || (i + 1));
+  }
+
+  try {
+    const extras = parseStsGuidVehicleBlocks(data, sourceFile, out);
+    if (extras.length) {
+      out.push(...extras);
+    }
+  } catch (_error) {
+    // best effort parse
+  }
+  return out;
+}
+
+function decodeStsEntry(entry) {
+  const raw = entry && entry.bytes instanceof Uint8Array ? entry.bytes : new Uint8Array(0);
+  if (raw.length < 6) {
+    throw new Error(`STS file too small: ${entry && entry.name ? entry.name : "unknown"}`);
+  }
+  const view = new DataView(raw.buffer, raw.byteOffset, raw.byteLength);
+  const packed = raw.subarray(4);
+  const inflator = new window.pako.Inflate();
+  inflator.push(packed, true);
+  if (inflator.err) {
+    throw new Error(`STS inflate failed for ${entry.name}: ${inflator.msg || inflator.err}`);
+  }
+  const payloadRaw = inflator.result instanceof Uint8Array ? inflator.result : new Uint8Array(inflator.result || []);
+  let consumed = packed.length;
+  if (inflator.strm && Number.isFinite(inflator.strm.next_in)) {
+    consumed = Math.max(0, Math.min(packed.length, Number(inflator.strm.next_in)));
+  }
+  const trailer = packed.subarray(consumed);
+  return {
+    payload: new Uint8Array(payloadRaw),
+    trailer: new Uint8Array(trailer),
+  };
+}
+
+function encodeStsBytes(payload, trailer) {
+  const data = payload instanceof Uint8Array ? payload : new Uint8Array(payload || []);
+  const tail = trailer instanceof Uint8Array ? trailer : new Uint8Array(trailer || []);
+  const packed = window.pako.deflate(data);
+  const out = new Uint8Array(4 + packed.length + tail.length);
+  const view = new DataView(out.buffer);
+  view.setUint32(0, data.length, true);
+  out.set(packed, 4);
+  if (tail.length) {
+    out.set(tail, 4 + packed.length);
+  }
+  return out;
+}
+
+function getVehiclesStsEntriesForCurrentSlot() {
+  if (!state.folder.loaded || state.folder.files.size === 0) {
+    return [];
+  }
+  const slot = getCurrentSaveSlotNumber();
+  const out = [];
+  for (const entry of state.folder.files.values()) {
+    if (isStsFilenameForSlot(entry.name, slot)) {
+      out.push(entry);
+    }
+  }
+  out.sort((a, b) => String(a.relPath || a.name || "").localeCompare(String(b.relPath || b.name || ""), undefined, { sensitivity: "base" }));
+  return out;
+}
+
+async function loadVehiclesFromFolder(manual = false) {
+  if (!els.vehiclesList || !els.vehiclesInfo) {
+    return;
+  }
+  if (state.vehicles.loading) {
+    return;
+  }
+  if (!state.folder.loaded || state.folder.files.size === 0) {
+    invalidateVehiclesCache("Upload a save folder to load STS files.");
+    return;
+  }
+  if (!state.main) {
+    invalidateVehiclesCache("Load or select a CompleteSave file first.");
+    return;
+  }
+  const pakoReady = await ensurePakoLoaded();
+  if (!pakoReady || !window.pako) {
+    setStatus("Failed to load vehicles runtime (pako).", "error");
+    return;
+  }
+
+  const slot = getCurrentSaveSlotNumber();
+  const folderSignature = buildVehiclesFolderSignature();
+  if (!manual && state.vehicles.entries.length > 0 && state.vehicles.loadedSlot === slot && state.vehicles.loadedForFolder === folderSignature) {
+    renderVehiclesList();
+    return;
+  }
+
+  const files = getVehiclesStsEntriesForCurrentSlot();
+  if (files.length === 0) {
+    invalidateVehiclesCache(`No STS files found for slot ${slot}.`);
+    return;
+  }
+
+  state.vehicles.loading = true;
+  els.vehiclesInfo.textContent = `Loading STS objects from ${files.length} file(s)...`;
+  setStatus(`Loading vehicles from STS files for slot ${slot}...`, "info");
+  try {
+    const parsedEntries = [];
+    const fileMap = new Map();
+    for (const fileEntry of files) {
+      const decoded = decodeStsEntry(fileEntry);
+      fileMap.set(fileEntry.key, {
+        key: fileEntry.key,
+        entry: fileEntry,
+        payload: decoded.payload,
+        trailer: decoded.trailer,
+      });
+      const parsed = parseStsMovableObjects(decoded.payload, fileEntry.name);
+      for (const obj of parsed) {
+        obj.fileKey = fileEntry.key;
+        parsedEntries.push(obj);
+      }
+    }
+    state.vehicles.entries = parsedEntries;
+    state.vehicles.visibleEntryIds = [];
+    state.vehicles.selected.clear();
+    state.vehicles.files = fileMap;
+    state.vehicles.loadedSlot = slot;
+    state.vehicles.loadedForFolder = folderSignature;
+    els.vehiclesInfo.textContent = `Loaded ${parsedEntries.length} vehicles/trailers from ${files.length} STS file(s) for slot ${slot}.`;
+    setStatus(`Vehicles loaded: ${parsedEntries.length} entries from ${files.length} STS file(s).`, "success");
+    renderVehiclesList();
+  } catch (error) {
+    invalidateVehiclesCache(`Failed to load STS data: ${error.message}`);
+    setStatus(`Failed to load vehicles: ${error.message}`, "error");
+  } finally {
+    state.vehicles.loading = false;
+  }
+}
+
+function readVehiclesFilters() {
+  return {
+    type: String(els.vehiclesType && els.vehiclesType.value ? els.vehiclesType.value : "").trim(),
+    region: String(els.vehiclesRegion && els.vehiclesRegion.value ? els.vehiclesRegion.value : "").trim(),
+    map: String(els.vehiclesMap && els.vehiclesMap.value ? els.vehiclesMap.value : "").trim(),
+    search: String(els.vehiclesSearch && els.vehiclesSearch.value ? els.vehiclesSearch.value : "").trim().toLowerCase(),
+  };
+}
+
+function refreshVehiclesFilterOptions() {
+  if (!els.vehiclesRegion || !els.vehiclesMap) {
+    return;
+  }
+  const entries = state.vehicles.entries || [];
+  const selectedRegion = String(els.vehiclesRegion.value || "");
+  const selectedMap = String(els.vehiclesMap.value || "");
+  const regions = [...new Set(entries.map((entry) => String(entry.regionName || "").trim()).filter(Boolean))].sort((a, b) => a.localeCompare(b));
+  const maps = [...new Set(entries.map((entry) => String(entry.mapName || entry.mapId || "").trim()).filter(Boolean))].sort((a, b) => a.localeCompare(b));
+
+  els.vehiclesRegion.innerHTML = "";
+  const allRegions = document.createElement("option");
+  allRegions.value = "";
+  allRegions.textContent = "All regions";
+  els.vehiclesRegion.append(allRegions);
+  for (const value of regions) {
+    const option = document.createElement("option");
+    option.value = value;
+    option.textContent = value;
+    els.vehiclesRegion.append(option);
+  }
+  if (selectedRegion && regions.includes(selectedRegion)) {
+    els.vehiclesRegion.value = selectedRegion;
+  }
+
+  els.vehiclesMap.innerHTML = "";
+  const allMaps = document.createElement("option");
+  allMaps.value = "";
+  allMaps.textContent = "All maps";
+  els.vehiclesMap.append(allMaps);
+  for (const value of maps) {
+    const option = document.createElement("option");
+    option.value = value;
+    option.textContent = value;
+    els.vehiclesMap.append(option);
+  }
+  if (selectedMap && maps.includes(selectedMap)) {
+    els.vehiclesMap.value = selectedMap;
+  }
+}
+
+function vehicleMatchesFilters(entry, filters) {
+  if (filters.type && String(entry.kind || "") !== filters.type) {
+    return false;
+  }
+  if (filters.region && String(entry.regionName || "") !== filters.region) {
+    return false;
+  }
+  if (filters.map && String(entry.mapName || entry.mapId || "") !== filters.map) {
+    return false;
+  }
+  if (filters.search) {
+    const text = [
+      entry.kind,
+      entry.name,
+      entry.typeId,
+      entry.objectId,
+      entry.regionName,
+      entry.mapName,
+      entry.mapId,
+    ]
+      .map((part) => String(part || "").toLowerCase())
+      .join(" ");
+    if (!text.includes(filters.search)) {
+      return false;
+    }
+  }
+  return true;
+}
+
+function escapeHtml(text) {
+  return String(text || "")
+    .replace(/&/g, "&amp;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;");
+}
+
+function renderVehiclesList() {
+  if (!els.vehiclesList) {
+    return;
+  }
+  if (!state.vehicles.entries || state.vehicles.entries.length === 0) {
+    els.vehiclesList.innerHTML = '<div class="vehicle-empty">No vehicle/trailer STS entries loaded.</div>';
+    state.vehicles.visibleEntryIds = [];
+    return;
+  }
+
+  refreshVehiclesFilterOptions();
+  const filters = readVehiclesFilters();
+  const visible = state.vehicles.entries.filter((entry) => vehicleMatchesFilters(entry, filters));
+  state.vehicles.visibleEntryIds = visible.map((entry) => String(entry.id || ""));
+
+  els.vehiclesList.innerHTML = "";
+  const head = document.createElement("div");
+  head.className = "vehicle-row vehicle-row-head";
+  head.innerHTML = "<span></span><span>Type</span><span>Name</span><span>Region</span><span>Map</span><span>X</span><span>Y</span><span>Z</span>";
+  els.vehiclesList.append(head);
+
+  for (const entry of visible) {
+    const row = document.createElement("div");
+    row.className = "vehicle-row";
+
+    const cb = document.createElement("input");
+    cb.type = "checkbox";
+    const entryId = String(entry.id || "");
+    cb.checked = state.vehicles.selected.has(entryId);
+    cb.addEventListener("change", () => {
+      if (cb.checked) {
+        state.vehicles.selected.add(entryId);
+      } else {
+        state.vehicles.selected.delete(entryId);
+      }
+      if (els.vehiclesInfo) {
+        els.vehiclesInfo.textContent = `Visible: ${visible.length} | Selected: ${state.vehicles.selected.size}`;
+      }
+    });
+    row.append(cb);
+
+    const kind = document.createElement("span");
+    kind.textContent = String(entry.kind || "");
+    row.append(kind);
+
+    const name = document.createElement("span");
+    name.className = "vehicle-name vehicle-col-extra";
+    name.innerHTML = `${escapeHtml(String(entry.name || ""))} <code>${escapeHtml(String(entry.typeId || ""))}</code>`;
+    row.append(name);
+
+    const region = document.createElement("span");
+    region.textContent = String(entry.regionName || entry.regionCode || "");
+    row.append(region);
+
+    const map = document.createElement("span");
+    map.className = "vehicle-col-extra";
+    map.textContent = String(entry.mapName || entry.mapId || "");
+    row.append(map);
+
+    const x = document.createElement("span");
+    x.textContent = Number(entry.x).toFixed(3);
+    row.append(x);
+    const y = document.createElement("span");
+    y.textContent = Number(entry.y).toFixed(3);
+    row.append(y);
+    const z = document.createElement("span");
+    z.textContent = Number(entry.z).toFixed(3);
+    row.append(z);
+
+    els.vehiclesList.append(row);
+  }
+
+  if (els.vehiclesInfo) {
+    els.vehiclesInfo.textContent = `Loaded: ${state.vehicles.entries.length} | Visible: ${visible.length} | Selected: ${state.vehicles.selected.size}`;
+  }
+}
+
+function selectVisibleVehicles() {
+  for (const id of state.vehicles.visibleEntryIds) {
+    if (id) {
+      state.vehicles.selected.add(id);
+    }
+  }
+  renderVehiclesList();
+}
+
+function clearVehicleSelection() {
+  state.vehicles.selected.clear();
+  renderVehiclesList();
+}
+
+function selectedVehicleEntries() {
+  if (!state.vehicles.entries || state.vehicles.entries.length === 0) {
+    return [];
+  }
+  const selected = state.vehicles.selected;
+  return state.vehicles.entries.filter((entry) => selected.has(String(entry.id || "")));
+}
+
+function allTransformOffsetsForVehicle(entry, payload) {
+  const offsets = [];
+  if (entry && Number.isInteger(entry.coordOff)) {
+    offsets.push(entry.coordOff);
+  }
+  if (entry && Array.isArray(entry.coordOffs)) {
+    for (const off of entry.coordOffs) {
+      if (Number.isInteger(off)) {
+        offsets.push(off);
+      }
+    }
+  }
+  const uniq = [...new Set(offsets)];
+  return uniq.filter((off) => off >= 0 && off + 12 <= payload.length);
+}
+
+function readF32(payload, offset) {
+  const view = new DataView(payload.buffer, payload.byteOffset, payload.byteLength);
+  return view.getFloat32(offset, true);
+}
+
+function writeF32(payload, offset, value) {
+  const view = new DataView(payload.buffer, payload.byteOffset, payload.byteLength);
+  view.setFloat32(offset, Number(value), true);
+}
+
+function saveTouchedVehiclesFiles(touchedKeys) {
+  let saved = 0;
+  for (const key of touchedKeys) {
+    const file = state.vehicles.files.get(key);
+    if (!file || !(file.payload instanceof Uint8Array)) {
+      continue;
+    }
+    const entry = state.folder.files.get(String(key).toLowerCase());
+    if (!entry) {
+      continue;
+    }
+    entry.bytes = encodeStsBytes(file.payload, file.trailer);
+    entry.dirty = true;
+    saved += 1;
+  }
+  if (saved > 0) {
+    updateFolderMeta();
+  }
+  return saved;
+}
+
+async function onVehiclesUnstuckSelected() {
+  if (state.vehicles.loading) {
+    setStatus("Wait for vehicles loading to finish.", "error");
+    return;
+  }
+  const selected = selectedVehicleEntries();
+  if (selected.length === 0) {
+    setStatus("No vehicle/trailer selected.", "error");
+    return;
+  }
+  const liftRaw = String((els.vehiclesLiftInput && els.vehiclesLiftInput.value) || "").trim();
+  const liftParsed = parseOptionalStrictFloat(liftRaw);
+  if (liftParsed.error || liftParsed.value == null) {
+    setStatus("Lift value is invalid.", "error");
+    return;
+  }
+  const lift = Number(liftParsed.value);
+  if (Math.abs(lift) < 1e-9) {
+    setStatus("Lift value is 0, nothing to apply.", "info");
+    return;
+  }
+
+  const touched = new Set();
+  let movedParts = 0;
+  for (const entry of selected) {
+    const file = state.vehicles.files.get(entry.fileKey);
+    if (!file || !(file.payload instanceof Uint8Array)) {
+      continue;
+    }
+    const offsets = allTransformOffsetsForVehicle(entry, file.payload);
+    for (const off of offsets) {
+      const x = readF32(file.payload, off);
+      const y = readF32(file.payload, off + 4);
+      const z = readF32(file.payload, off + 8);
+      writeF32(file.payload, off, x);
+      writeF32(file.payload, off + 4, y + lift);
+      writeF32(file.payload, off + 8, z);
+      movedParts += 1;
+    }
+    entry.y = Number(entry.y) + lift;
+    touched.add(entry.fileKey);
+  }
+  const saved = saveTouchedVehiclesFiles(touched);
+  renderVehiclesList();
+  setStatus(`Vehicles unstuck applied to ${selected.length} entries (${movedParts} transforms). Saved ${saved} STS file(s).`, "success");
+}
+
+async function onVehiclesApplyCustomXyz() {
+  if (state.vehicles.loading) {
+    setStatus("Wait for vehicles loading to finish.", "error");
+    return;
+  }
+  const selected = selectedVehicleEntries();
+  if (selected.length === 0) {
+    setStatus("No vehicle/trailer selected.", "error");
+    return;
+  }
+  const xParsed = parseOptionalStrictFloat((els.vehiclesXInput && els.vehiclesXInput.value) || "");
+  const yParsed = parseOptionalStrictFloat((els.vehiclesYInput && els.vehiclesYInput.value) || "");
+  const zParsed = parseOptionalStrictFloat((els.vehiclesZInput && els.vehiclesZInput.value) || "");
+  if (xParsed.error || yParsed.error || zParsed.error) {
+    setStatus("X/Y/Z values are invalid.", "error");
+    return;
+  }
+  const vx = xParsed.value;
+  const vy = yParsed.value;
+  const vz = zParsed.value;
+  if (vx == null && vy == null && vz == null) {
+    setStatus("X/Y/Z fields are empty.", "error");
+    return;
+  }
+
+  const touched = new Set();
+  let movedParts = 0;
+  for (const entry of selected) {
+    const file = state.vehicles.files.get(entry.fileKey);
+    if (!file || !(file.payload instanceof Uint8Array)) {
+      continue;
+    }
+    const targetX = vx == null ? Number(entry.x) : Number(vx);
+    const targetY = vy == null ? Number(entry.y) : Number(vy);
+    const targetZ = vz == null ? Number(entry.z) : Number(vz);
+    const dx = targetX - Number(entry.x);
+    const dy = targetY - Number(entry.y);
+    const dz = targetZ - Number(entry.z);
+    const offsets = allTransformOffsetsForVehicle(entry, file.payload);
+    for (const off of offsets) {
+      const cx = readF32(file.payload, off);
+      const cy = readF32(file.payload, off + 4);
+      const cz = readF32(file.payload, off + 8);
+      writeF32(file.payload, off, cx + dx);
+      writeF32(file.payload, off + 4, cy + dy);
+      writeF32(file.payload, off + 8, cz + dz);
+      movedParts += 1;
+    }
+    entry.x = Number(entry.x) + dx;
+    entry.y = Number(entry.y) + dy;
+    entry.z = Number(entry.z) + dz;
+    touched.add(entry.fileKey);
+  }
+  const saved = saveTouchedVehiclesFiles(touched);
+  renderVehiclesList();
+  setStatus(`Custom XYZ applied to ${selected.length} entries (${movedParts} transforms). Saved ${saved} STS file(s).`, "success");
+}
+
+function writeSpanString(payload, beg, end, seedText, keepGuidShape = false) {
+  if (!Number.isInteger(beg) || !Number.isInteger(end) || beg < 0 || end <= beg || beg >= payload.length) {
+    return false;
+  }
+  const end2 = Math.min(end, payload.length);
+  if (end2 <= beg) {
+    return false;
+  }
+  const spanLen = end2 - beg;
+  if (spanLen <= 0) {
+    return false;
+  }
+  if (spanLen === 1) {
+    payload[beg] = 0;
+    return true;
+  }
+  const textLen = spanLen - 1;
+  const seed = keepGuidShape && textLen === 38
+    ? "{00000000-0000-0000-0000-000000000000}"
+    : String(seedText || "deleted");
+  const bytes = new TextEncoder().encode(seed);
+  const fill = new Uint8Array(textLen);
+  fill.fill("_".charCodeAt(0));
+  fill.set(bytes.subarray(0, Math.min(bytes.length, textLen)));
+  payload.set(fill, beg);
+  payload[beg + textLen] = 0;
+  return true;
+}
+
+function rewriteAllCStringOccurrences(payload, targetText, replacementText) {
+  const target = String(targetText || "");
+  if (!target) {
+    return 0;
+  }
+  let tBytes = null;
+  let rBytes = null;
+  try {
+    tBytes = new TextEncoder().encode(target);
+    rBytes = new TextEncoder().encode(String(replacementText || "deleted"));
+  } catch (_error) {
+    return 0;
+  }
+  if (!tBytes || tBytes.length === 0) {
+    return 0;
+  }
+  const needle = new Uint8Array(tBytes.length + 1);
+  needle.set(tBytes, 0);
+  needle[tBytes.length] = 0;
+  let count = 0;
+  for (let pos = 0; pos <= payload.length - needle.length; pos += 1) {
+    let matches = true;
+    for (let i = 0; i < needle.length; i += 1) {
+      if (payload[pos + i] !== needle[i]) {
+        matches = false;
+        break;
+      }
+    }
+    if (!matches) {
+      continue;
+    }
+    const spanLen = tBytes.length;
+    for (let i = 0; i < spanLen; i += 1) {
+      payload[pos + i] = "_".charCodeAt(0);
+    }
+    const lim = Math.min(spanLen, rBytes.length);
+    for (let i = 0; i < lim; i += 1) {
+      payload[pos + i] = rBytes[i];
+    }
+    count += 1;
+    pos += needle.length - 1;
+  }
+  return count;
+}
+
+function invalidateVehicleEntry(payload, entry) {
+  let changed = false;
+  if (writeSpanString(payload, Number(entry.typeBeg), Number(entry.typeEnd), "deleted_type")) {
+    changed = true;
+  }
+  if (writeSpanString(payload, Number(entry.objBeg), Number(entry.objEnd), "deleted_entry_id")) {
+    changed = true;
+  }
+  if (writeSpanString(payload, Number(entry.guidBeg), Number(entry.guidEnd), "deleted_guid", true)) {
+    changed = true;
+  }
+  const typeId = String(entry.typeId || "").trim();
+  if (typeId && rewriteAllCStringOccurrences(payload, typeId, "deleted_type") > 0) {
+    changed = true;
+  }
+  const objectId = String(entry.objectId || "").trim();
+  if (objectId && rewriteAllCStringOccurrences(payload, objectId, "deleted_entry_id") > 0) {
+    changed = true;
+  }
+  const guid = String(entry.guid || "").trim();
+  if (GUID_TEXT_RE.test(guid) && rewriteAllCStringOccurrences(payload, guid, "{00000000-0000-0000-0000-000000000000}") > 0) {
+    changed = true;
+  }
+  return changed;
+}
+
+async function onVehiclesDeleteSelected() {
+  if (state.vehicles.loading) {
+    setStatus("Wait for vehicles loading to finish.", "error");
+    return;
+  }
+  const selected = selectedVehicleEntries();
+  if (selected.length === 0) {
+    setStatus("No vehicle/trailer selected.", "error");
+    return;
+  }
+  const ok = window.confirm(`Delete ${selected.length} selected vehicle/trailer entries from STS files? This cannot be undone without backup.`);
+  if (!ok) {
+    return;
+  }
+  const touched = new Set();
+  const deletedIds = new Set();
+  let deletedCount = 0;
+  let skippedCount = 0;
+  for (const entry of selected) {
+    const file = state.vehicles.files.get(entry.fileKey);
+    if (!file || !(file.payload instanceof Uint8Array)) {
+      skippedCount += 1;
+      continue;
+    }
+    const okInv = invalidateVehicleEntry(file.payload, entry);
+    if (okInv) {
+      touched.add(entry.fileKey);
+      deletedIds.add(String(entry.id || ""));
+      deletedCount += 1;
+    } else {
+      skippedCount += 1;
+    }
+  }
+  if (touched.size === 0) {
+    setStatus("Failed to delete selected entries.", "error");
+    return;
+  }
+  const saved = saveTouchedVehiclesFiles(touched);
+  state.vehicles.entries = state.vehicles.entries.filter((entry) => !deletedIds.has(String(entry.id || "")));
+  for (const id of deletedIds) {
+    state.vehicles.selected.delete(id);
+  }
+  renderVehiclesList();
+  setStatus(
+    `Deleted ${deletedCount} entries. Saved ${saved} STS file(s).${skippedCount ? ` Skipped ${skippedCount}.` : ""}`,
+    "success",
+  );
 }
 
 function buildSeasonMapSelector(container, prefix) {
@@ -3326,6 +4741,7 @@ function refreshObjectivesFromMain() {
     state.objectives.data = null;
     state.objectives.visibleKeys = [];
     state.objectives.selected.clear();
+    state.objectives.reaccept.clear();
     state.objectives.finishedInSave.clear();
     renderObjectivesList();
     return;
@@ -3336,6 +4752,7 @@ function refreshObjectivesFromMain() {
       state.objectives.data = null;
       state.objectives.visibleKeys = [];
       state.objectives.selected.clear();
+      state.objectives.reaccept.clear();
       state.objectives.finishedInSave.clear();
       els.objectivesInfo.textContent = "objectiveStates block not found.";
       els.objectivesList.innerHTML = "";
@@ -3349,11 +4766,13 @@ function refreshObjectivesFromMain() {
     state.objectives.data = parsed;
     state.objectives.finishedInSave = collectFinishedObjectivesFromMain(state.main.text, parsed);
     state.objectives.selected.clear();
+    state.objectives.reaccept.clear();
     renderObjectivesList();
   } catch (error) {
     state.objectives.data = null;
     state.objectives.visibleKeys = [];
     state.objectives.selected.clear();
+    state.objectives.reaccept.clear();
     state.objectives.finishedInSave.clear();
     els.objectivesInfo.textContent = `Failed to parse objectiveStates: ${error.message}`;
     els.objectivesList.innerHTML = "";
@@ -3736,6 +5155,9 @@ function renderObjectivesList() {
 
     const meta = state.objectives.catalogMeta[key];
     const displayName = getObjectiveDisplayName(key, entry, meta) || humanizeObjectiveKey(key) || key;
+    const objectiveType = getObjectiveTypeForFilter(key, meta);
+    const isTaskObjective = objectiveType === "TASK";
+    const canReaccept = isFinished && isTaskObjective;
     const row = document.createElement("div");
     row.className = "objective-row";
 
@@ -3754,24 +5176,44 @@ function renderObjectivesList() {
     }
 
     const status = document.createElement("span");
-    status.className = "pill";
-    status.textContent = isFinished ? "finished" : "pending";
+    status.className = canReaccept ? "pill warn" : "pill";
+    if (canReaccept && state.objectives.reaccept.has(key)) {
+      status.textContent = "re-accept queued";
+    } else {
+      status.textContent = isFinished ? "finished" : "pending";
+    }
 
     const check = document.createElement("input");
     check.type = "checkbox";
     if (isFinished) {
       state.objectives.selected.delete(key);
     }
-    check.checked = isFinished || state.objectives.selected.has(key);
-    check.disabled = isFinished;
-    check.addEventListener("change", () => {
+    if (canReaccept) {
+      check.checked = !state.objectives.reaccept.has(key);
+      check.disabled = false;
+    } else {
+      check.checked = isFinished || state.objectives.selected.has(key);
+      check.disabled = isFinished;
       if (isFinished) {
-        return;
+        state.objectives.reaccept.delete(key);
       }
-      if (check.checked) {
-        state.objectives.selected.add(key);
+    }
+    check.addEventListener("change", () => {
+      if (canReaccept) {
+        if (check.checked) {
+          state.objectives.reaccept.delete(key);
+        } else {
+          state.objectives.reaccept.add(key);
+        }
       } else {
-        state.objectives.selected.delete(key);
+        if (isFinished) {
+          return;
+        }
+        if (check.checked) {
+          state.objectives.selected.add(key);
+        } else {
+          state.objectives.selected.delete(key);
+        }
       }
       updateObjectivesInfo({
         mode: "main",
@@ -3779,7 +5221,11 @@ function renderObjectivesList() {
         filtered: visible.length,
         shown: visible.length,
         finishedShown: finishedCount,
+        reacceptQueued: state.objectives.reaccept.size,
       });
+      if (canReaccept) {
+        renderObjectivesList();
+      }
     });
 
     row.append(infoWrap, status, check);
@@ -3792,18 +5238,20 @@ function renderObjectivesList() {
     filtered: visible.length,
     shown: visible.length,
     finishedShown: finishedCount,
+    reacceptQueued: state.objectives.reaccept.size,
   });
 }
 
 function updateObjectivesInfo(summary) {
   const source = state.objectives.catalogSource ? ` | Source: ${state.objectives.catalogSource}` : "";
+  const reaccept = state.objectives.reaccept.size;
   if (summary.mode === "catalog") {
     els.objectivesInfo.textContent =
       `Catalog entries: ${summary.total} | Filtered: ${summary.filtered} | Showing: ${summary.shown} | Selected: ${state.objectives.selected.size} | Upload Main Save to apply changes.${source}`;
     return;
   }
   els.objectivesInfo.textContent =
-    `Total: ${summary.total} | Filtered: ${summary.filtered} | Showing: ${summary.shown} | Finished shown: ${summary.finishedShown || 0} | Selected: ${state.objectives.selected.size}${source}`;
+    `Total: ${summary.total} | Filtered: ${summary.filtered} | Showing: ${summary.shown} | Finished shown: ${summary.finishedShown || 0} | Selected: ${state.objectives.selected.size} | Re-accept queued: ${summary.reacceptQueued != null ? summary.reacceptQueued : reaccept}${source}`;
 }
 
 function setObjectivesNeedMainMessage() {
@@ -3831,6 +5279,7 @@ function selectVisibleObjectives() {
 
 function clearObjectiveSelection() {
   state.objectives.selected.clear();
+  state.objectives.reaccept.clear();
   renderObjectivesList();
 }
 
@@ -4160,40 +5609,385 @@ function isLikelyObjectiveKey(token) {
   );
 }
 
+function dedupeObjectiveIds(ids) {
+  const out = [];
+  const seen = new Set();
+  for (const raw of ids || []) {
+    const key = String(raw || "").trim();
+    if (!key || seen.has(key)) {
+      continue;
+    }
+    seen.add(key);
+    out.push(key);
+  }
+  return out;
+}
+
+function isTaskObjectiveId(key) {
+  const id = String(key || "").trim();
+  if (!id) {
+    return false;
+  }
+  const meta = state.objectives.catalogMeta[id];
+  const kind = getObjectiveTypeForFilter(id, meta);
+  if (kind === "TASK") {
+    return true;
+  }
+  if (kind === "CONTRACT" || kind === "CONTEST") {
+    return false;
+  }
+  const upper = id.toUpperCase();
+  return upper.endsWith("_TSK") || upper.endsWith("_TASK");
+}
+
+function isObjectiveCurrentlyFinished(key) {
+  const id = String(key || "").trim();
+  if (!id) {
+    return false;
+  }
+  if (state.objectives.finishedInSave.has(id.toUpperCase())) {
+    return true;
+  }
+  if (state.objectives.data && isObjectiveFinishedEntry(state.objectives.data[id])) {
+    return true;
+  }
+  return false;
+}
+
+function parseObjectiveIdCollection(raw) {
+  if (raw && typeof raw === "object" && !Array.isArray(raw)) {
+    return { shape: "dict", items: dedupeObjectiveIds(Object.keys(raw)) };
+  }
+  if (Array.isArray(raw)) {
+    const onlyStrings = raw.filter((item) => typeof item === "string");
+    return { shape: "list", items: dedupeObjectiveIds(onlyStrings) };
+  }
+  return { shape: "list", items: [] };
+}
+
+function packObjectiveIdCollection(shape, items) {
+  if (shape === "dict") {
+    return Object.fromEntries((items || []).map((item) => [item, true]));
+  }
+  return [...(items || [])];
+}
+
+function addObjectiveIdsToCollection(raw, ids) {
+  const parsed = parseObjectiveIdCollection(raw);
+  const addIds = dedupeObjectiveIds(ids);
+  if (addIds.length === 0) {
+    return { value: packObjectiveIdCollection(parsed.shape, parsed.items), changed: 0 };
+  }
+  const out = [...parsed.items];
+  const seen = new Set(out);
+  let added = 0;
+  for (const id of addIds) {
+    if (seen.has(id)) {
+      continue;
+    }
+    out.push(id);
+    seen.add(id);
+    added += 1;
+  }
+  return { value: packObjectiveIdCollection(parsed.shape, out), changed: added };
+}
+
+function removeObjectiveIdsFromCollection(raw, ids) {
+  const parsed = parseObjectiveIdCollection(raw);
+  const removeSet = new Set(dedupeObjectiveIds(ids));
+  if (removeSet.size === 0) {
+    return { value: packObjectiveIdCollection(parsed.shape, parsed.items), changed: 0 };
+  }
+  const out = parsed.items.filter((id) => !removeSet.has(id));
+  return {
+    value: packObjectiveIdCollection(parsed.shape, out),
+    changed: Math.max(0, parsed.items.length - out.length),
+  };
+}
+
+function ensureObjectiveStateEntry(rawState, objectiveId, mode) {
+  const id = String(objectiveId || "").trim();
+  const entry = rawState && typeof rawState === "object" && !Array.isArray(rawState) ? rawState : {};
+  entry.id = id;
+  if (!entry.failReasons || typeof entry.failReasons !== "object" || Array.isArray(entry.failReasons)) {
+    entry.failReasons = {};
+  }
+  if (entry.spentTime == null) {
+    entry.spentTime = 0;
+  }
+  entry.isTimerStarted = true;
+  if (mode === "complete") {
+    entry.isFinished = true;
+    entry.wasCompletedAtLeastOnce = true;
+  } else {
+    entry.isFinished = false;
+    entry.wasCompletedAtLeastOnce = false;
+  }
+  return entry;
+}
+
+function mutateRootObjectiveStates(content, completionIds, unfinishedIds) {
+  const m = /"objectiveStates"\s*:\s*\{/i.exec(content);
+  if (!m) {
+    throw new Error('"objectiveStates" block not found.');
+  }
+  const block = extractBraceBlock(content, m.index);
+  const states = JSON.parse(block.block);
+  if (!states || typeof states !== "object" || Array.isArray(states)) {
+    throw new Error("objectiveStates is not an object.");
+  }
+
+  let completedTouched = 0;
+  for (const id of dedupeObjectiveIds(completionIds)) {
+    const before = states[id];
+    const next = ensureObjectiveStateEntry(before, id, "complete");
+    if (!before || before.isFinished !== true || before.wasCompletedAtLeastOnce !== true) {
+      completedTouched += 1;
+    }
+    states[id] = next;
+  }
+
+  let unfinishedTouched = 0;
+  for (const id of dedupeObjectiveIds(unfinishedIds)) {
+    const before = states[id];
+    const wasFinished = Boolean(
+      before &&
+      typeof before === "object" &&
+      (before.isFinished === true || before.wasCompletedAtLeastOnce === true),
+    );
+    states[id] = ensureObjectiveStateEntry(before, id, "unfinished");
+    if (!before || wasFinished) {
+      unfinishedTouched += 1;
+    }
+  }
+
+  const newBlock = JSON.stringify(states);
+  return {
+    content: content.slice(0, block.start) + newBlock + content.slice(block.end),
+    completedTouched,
+    unfinishedTouched,
+  };
+}
+
+function mutateCompleteSaveObjectiveData(content, payload) {
+  const acceptTaskIds = dedupeObjectiveIds(payload && payload.acceptTaskIds);
+  const reacceptTaskIds = dedupeObjectiveIds(payload && payload.reacceptTaskIds);
+  const contestCompleteIds = dedupeObjectiveIds(payload && payload.contestCompleteIds);
+  const activeTaskIds = dedupeObjectiveIds([...acceptTaskIds, ...reacceptTaskIds]);
+
+  const contestTimesNewEntries = {};
+  const matches = [];
+  const re = /"(CompleteSave\d*)"\s*:\s*\{/g;
+  let m = null;
+  while ((m = re.exec(content)) !== null) {
+    matches.push({ key: m[1], index: m.index });
+  }
+
+  let changedBlocks = 0;
+  let discoveredAdded = 0;
+  let finishedRemoved = 0;
+  let contestFinishedAdded = 0;
+  let viewedRemoved = 0;
+  let statesTouched = 0;
+
+  for (let i = matches.length - 1; i >= 0; i -= 1) {
+    const hit = matches[i];
+    let block = null;
+    try {
+      block = extractBraceBlock(content, hit.index);
+    } catch (_error) {
+      continue;
+    }
+    let valueData = null;
+    try {
+      valueData = JSON.parse(block.block);
+    } catch (_error) {
+      continue;
+    }
+
+    let ssl = valueData.SslValue;
+    if (!ssl || typeof ssl !== "object" || Array.isArray(ssl)) {
+      const nested = valueData[hit.key];
+      ssl = nested && typeof nested === "object" ? nested.SslValue : null;
+    }
+    if (!ssl || typeof ssl !== "object" || Array.isArray(ssl)) {
+      ssl = {};
+    }
+
+    let changed = false;
+
+    if (activeTaskIds.length > 0) {
+      const discovered = addObjectiveIdsToCollection(ssl.discoveredObjectives, activeTaskIds);
+      ssl.discoveredObjectives = discovered.value;
+      if (discovered.changed > 0) {
+        discoveredAdded += discovered.changed;
+        changed = true;
+      }
+    }
+
+    if (reacceptTaskIds.length > 0) {
+      const finishedRemovedOut = removeObjectiveIdsFromCollection(ssl.finishedObjs, reacceptTaskIds);
+      ssl.finishedObjs = finishedRemovedOut.value;
+      if (finishedRemovedOut.changed > 0) {
+        finishedRemoved += finishedRemovedOut.changed;
+        changed = true;
+      }
+    }
+
+    if (contestCompleteIds.length > 0) {
+      const finishedAddedOut = addObjectiveIdsToCollection(ssl.finishedObjs, contestCompleteIds);
+      ssl.finishedObjs = finishedAddedOut.value;
+      if (finishedAddedOut.changed > 0) {
+        contestFinishedAdded += finishedAddedOut.changed;
+        changed = true;
+      }
+      let contestTimes = ssl.contestTimes;
+      if (!contestTimes || typeof contestTimes !== "object" || Array.isArray(contestTimes)) {
+        contestTimes = {};
+      }
+      let contestTimesChanged = false;
+      for (const id of contestCompleteIds) {
+        if (!(id in contestTimes)) {
+          contestTimes[id] = 1;
+          contestTimesNewEntries[id] = 1;
+          contestTimesChanged = true;
+        }
+      }
+      if (contestTimesChanged) {
+        ssl.contestTimes = contestTimes;
+        changed = true;
+      }
+    }
+
+    const viewedIds = dedupeObjectiveIds([...activeTaskIds, ...contestCompleteIds]);
+    if (viewedIds.length > 0) {
+      const viewedOut = removeObjectiveIdsFromCollection(ssl.viewedUnactivatedObjectives, viewedIds);
+      ssl.viewedUnactivatedObjectives = viewedOut.value;
+      if (viewedOut.changed > 0) {
+        viewedRemoved += viewedOut.changed;
+        changed = true;
+      }
+    }
+
+    if (activeTaskIds.length > 0 || contestCompleteIds.length > 0) {
+      let states = ssl.objectiveStates;
+      if (!states || typeof states !== "object" || Array.isArray(states)) {
+        states = {};
+      }
+      let localTouched = 0;
+      for (const id of activeTaskIds) {
+        const before = states[id];
+        const wasFinished = Boolean(before && typeof before === "object" && before.isFinished === true);
+        states[id] = ensureObjectiveStateEntry(before, id, "unfinished");
+        if (!before || wasFinished) {
+          localTouched += 1;
+        }
+      }
+      for (const id of contestCompleteIds) {
+        const before = states[id];
+        const alreadyComplete = Boolean(before && typeof before === "object" && before.isFinished === true);
+        states[id] = ensureObjectiveStateEntry(before, id, "complete");
+        if (!alreadyComplete) {
+          localTouched += 1;
+        }
+      }
+      if (localTouched > 0) {
+        statesTouched += localTouched;
+        changed = true;
+      }
+      ssl.objectiveStates = states;
+    }
+
+    if (!changed) {
+      continue;
+    }
+
+    valueData.SslValue = ssl;
+    const nextBlock = JSON.stringify(valueData);
+    content = content.slice(0, block.start) + nextBlock + content.slice(block.end);
+    changedBlocks += 1;
+  }
+
+  if (Object.keys(contestTimesNewEntries).length > 0) {
+    content = updateAllContestTimesBlocks(content, contestTimesNewEntries);
+  }
+
+  return {
+    content,
+    changedBlocks,
+    discoveredAdded,
+    finishedRemoved,
+    contestFinishedAdded,
+    viewedRemoved,
+    statesTouched,
+  };
+}
+
+function acceptSelectedObjectivesTasks() {
+  if (!requireMain()) {
+    return;
+  }
+  const taskIds = dedupeObjectiveIds(
+    [...state.objectives.selected].filter((id) => isTaskObjectiveId(id) && !isObjectiveCurrentlyFinished(id)),
+  );
+  if (taskIds.length === 0) {
+    setStatus("No selected unfinished TASK entries to accept.", "error");
+    return;
+  }
+  try {
+    const rootOut = mutateRootObjectiveStates(state.main.text, [], taskIds);
+    const saveOut = mutateCompleteSaveObjectiveData(rootOut.content, {
+      acceptTaskIds: taskIds,
+      reacceptTaskIds: [],
+      contestCompleteIds: [],
+    });
+    for (const id of taskIds) {
+      state.objectives.selected.delete(id);
+    }
+    commitMain(
+      saveOut.content,
+      `Objectives+ Accept Tasks finished. Requested: ${taskIds.length}, states touched: ${rootOut.unfinishedTouched + saveOut.statesTouched}.`,
+    );
+  } catch (error) {
+    setStatus(`Failed to accept tasks: ${error.message}`, "error");
+  }
+}
+
 function completeSelectedObjectives() {
   if (!requireMain()) {
     return;
   }
-  if (state.objectives.selected.size === 0) {
-    setStatus("No objectives selected.", "error");
+  const completionIds = dedupeObjectiveIds(
+    [...state.objectives.selected].filter((id) => !isObjectiveCurrentlyFinished(id)),
+  );
+  const reacceptTaskIds = dedupeObjectiveIds(
+    [...state.objectives.reaccept].filter((id) => isTaskObjectiveId(id)),
+  );
+  const contestCompleteIds = completionIds.filter((id) => {
+    const meta = state.objectives.catalogMeta[id];
+    return getObjectiveTypeForFilter(id, meta) === "CONTEST";
+  });
+
+  if (completionIds.length === 0 && reacceptTaskIds.length === 0) {
+    setStatus("No objective changes selected.", "error");
     return;
   }
+
   try {
-    const m = /"objectiveStates"\s*:\s*\{/i.exec(state.main.text);
-    if (!m) {
-      throw new Error('"objectiveStates" block not found.');
-    }
-    const block = extractBraceBlock(state.main.text, m.index);
-    const obj = JSON.parse(block.block);
-    let updated = 0;
-    for (const key of state.objectives.selected) {
-      let entry = obj[key];
-      if (!entry || typeof entry !== "object") {
-        entry = {};
-        obj[key] = entry;
-      }
-      if (entry.isFinished !== true || entry.wasCompletedAtLeastOnce !== true) {
-        entry.isFinished = true;
-        entry.wasCompletedAtLeastOnce = true;
-        updated += 1;
-      }
-    }
-    const newBlock = JSON.stringify(obj);
-    const content = state.main.text.slice(0, block.start) + newBlock + state.main.text.slice(block.end);
+    const rootOut = mutateRootObjectiveStates(state.main.text, completionIds, reacceptTaskIds);
+    const saveOut = mutateCompleteSaveObjectiveData(rootOut.content, {
+      acceptTaskIds: [],
+      reacceptTaskIds,
+      contestCompleteIds,
+    });
     state.objectives.selected.clear();
-    commitMain(content, `Objectives+ updated (${updated} completed).`);
+    state.objectives.reaccept.clear();
+    commitMain(
+      saveOut.content,
+      `Objectives+ applied. Completed: ${completionIds.length}, task re-accepts: ${reacceptTaskIds.length}, contest finished entries added: ${saveOut.contestFinishedAdded}.`,
+    );
   } catch (error) {
-    setStatus(`Failed to complete objectives: ${error.message}`, "error");
+    setStatus(`Failed to apply objectives changes: ${error.message}`, "error");
   }
 }
 

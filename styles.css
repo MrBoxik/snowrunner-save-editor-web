@@ -473,6 +473,21 @@ body {
   grid-template-columns: repeat(3, minmax(0, 1fr));
 }
 
+.vehicles-filter-grid {
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  margin-bottom: 8px;
+}
+
+.vehicles-edit-grid {
+  grid-template-columns: minmax(0, 2fr) repeat(2, minmax(0, 1fr));
+}
+
+.vehicles-xyz-row {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 7px;
+}
+
 .form-grid label {
   display: grid;
   gap: 5px;
@@ -854,6 +869,61 @@ body {
   background: rgba(84, 137, 164, 0.27);
 }
 
+.pill.warn {
+  border-color: color-mix(in srgb, var(--primary) 70%, #f2d5ad 30%);
+  color: #ffe8c9;
+  background: rgba(183, 121, 37, 0.22);
+}
+
+.vehicles-list {
+  margin-top: 10px;
+  border: 1px solid color-mix(in srgb, var(--border) 88%, #74838c 12%);
+  border-radius: 10px;
+  background: rgba(39, 51, 59, 0.82);
+  max-height: 460px;
+  overflow: auto;
+  padding: 8px;
+  display: grid;
+  gap: 6px;
+}
+
+.vehicle-row {
+  display: grid;
+  grid-template-columns: auto auto 1.4fr 1fr 1fr repeat(3, minmax(64px, auto));
+  gap: 9px;
+  align-items: center;
+  border: 1px solid color-mix(in srgb, var(--border) 88%, #74848d 12%);
+  border-radius: 8px;
+  padding: 7px 8px;
+  background: rgba(30, 41, 47, 0.9);
+  font-size: 0.9rem;
+}
+
+.vehicle-row-head {
+  background: rgba(52, 67, 76, 0.92);
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.03em;
+}
+
+.vehicle-row code {
+  font-family: "Space Mono", monospace;
+  font-size: 0.8rem;
+}
+
+.vehicle-name {
+  color: #f1f7fa;
+  font-weight: 700;
+}
+
+.vehicle-empty {
+  border: 1px dashed color-mix(in srgb, var(--border) 75%, #8ca0aa 25%);
+  border-radius: 9px;
+  padding: 12px;
+  color: var(--muted);
+  text-align: center;
+}
+
 .rank-xp-help {
   position: absolute;
   right: 14px;
@@ -1031,6 +1101,19 @@ body {
   .fog-automation-grid {
     grid-template-columns: repeat(2, minmax(0, 1fr));
   }
+
+  .vehicles-edit-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .vehicle-row {
+    grid-template-columns: auto auto 1fr 1fr;
+    row-gap: 6px;
+  }
+
+  .vehicle-row .vehicle-col-extra {
+    grid-column: span 2;
+  }
 }
 
 @media (max-width: 720px) {
@@ -1134,6 +1217,14 @@ body {
   }
 
   .objective-row {
+    grid-template-columns: 1fr;
+  }
+
+  .vehicles-xyz-row {
+    grid-template-columns: 1fr;
+  }
+
+  .vehicle-row {
     grid-template-columns: 1fr;
   }
 
