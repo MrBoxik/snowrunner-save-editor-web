@@ -23,9 +23,3 @@
   - Achievements unlock for existing entries
 
 All edits are done in-browser. Files are not uploaded to a server. The folder loader also supports decoded WGS / Xbox App save folders and rebuilds their original layout on zip download.
-
-## Objectives+ data notes
-
-- Embedded catalog is bundled in `app.js`, so Objectives+ works even on `file://`.
-- If you want frequent updates, regenerate `data/maprunner_data.csv` with your Python tool, then run `python data/embed_catalog_into_app.py` to re-embed it into `app.js`.
-- Optional automation: `.github/workflows/update-objectives-catalog.yml` can run in GitHub Actions on schedule and auto-refresh `data/maprunner_data.csv` + embedded catalog in `app.js`.
