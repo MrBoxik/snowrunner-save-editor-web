@@ -297,6 +297,9 @@ const REGION_LEVELS = (() => {
   return out;
 })();
 
+const RULE_RANDOM_LABEL = "random";
+const RULE_RANDOM_VALUE = "__RULE_RANDOM__";
+
 const RULE_DEFINITIONS = [
   {
     label: "Game difficulty",
@@ -308,65 +311,11 @@ const RULE_DEFINITIONS = [
     ],
   },
   {
-    label: "Addon Selling Price",
-    key: "addonSellingFactor",
-    options: [
-      { label: "normal", value: 1.0 },
-      { label: "10%", value: 0.1 },
-      { label: "30%", value: 0.3 },
-      { label: "50%", value: 0.5 },
-      { label: "no refunds", value: 0 },
-    ],
-  },
-  {
-    label: "Trailer selling price",
-    key: "trailerSellingFactor",
-    options: [
-      { label: "normal price", value: 1 },
-      { label: "50%", value: 0.5 },
-      { label: "30%", value: 0.3 },
-      { label: "10%", value: 0.1 },
-      { label: "cant be sold", value: -1 },
-    ],
-  },
-  {
-    label: "Trailer availability",
-    key: "trailerAvailability",
-    options: [
-      { label: "default", value: 0 },
-      { label: "all trailers available", value: 1 },
-    ],
-  },
-  {
-    label: "truck switching price (Over Minimap)",
-    key: "teleportationPrice",
-    options: [
-      { label: "free", value: 0 },
-      { label: "500", value: 500 },
-      { label: "1000", value: 1000 },
-      { label: "2000", value: 2000 },
-      { label: "5000", value: 5000 },
-    ],
-  },
-  {
-    label: "Tire availability",
-    key: "tyreAvailability",
-    options: [
-      { label: "default", value: 1 },
-      { label: "all tires available", value: 0 },
-      { label: "highway , allraod", value: 2 },
-      { label: "highway, allroad, offroad", value: 3 },
-      { label: "no mudtires", value: 4 },
-      { label: "no chained tires", value: 5 },
-      { label: "random per garage", value: 6 },
-    ],
-  },
-  {
-    label: "truck availibility",
+    label: "Truck availability",
     key: "truckAvailability",
     options: [
       { label: "default", value: 1 },
-      { label: "all trucks are available from the start", value: 0 },
+      { label: "all trucks available from start", value: 0 },
       { label: "5-15 trucks in each garage", value: 3 },
       { label: "store unlocks at rank 10", value: 2 },
       { label: "store unlocks at rank 20", value: 2 },
@@ -375,52 +324,14 @@ const RULE_DEFINITIONS = [
     ],
   },
   {
-    label: "truck pricing",
+    label: "Truck pricing",
     key: "truckPricingFactor",
     options: [
       { label: "default", value: 1 },
       { label: "free", value: 0 },
-      { label: "2 times", value: 2 },
-      { label: "4 times", value: 4 },
-      { label: "6 times", value: 6 },
-    ],
-  },
-  {
-    label: "Internal addon availability",
-    key: "internalAddonAvailability",
-    options: [
-      { label: "default", value: 0 },
-      { label: "all internal addons unlocked", value: 1 },
-    ],
-  },
-  {
-    label: "Fuel price",
-    key: "fuelPriceFactor",
-    options: [
-      { label: "normal price", value: 1 },
-      { label: "free", value: 0 },
-      { label: "2times", value: 2 },
-      { label: "4times", value: 4 },
-      { label: "6times", value: 6 },
-    ],
-  },
-  {
-    label: "Garage repair price",
-    key: "garageRepairePriceFactor",
-    options: [
-      { label: "free", value: 0 },
-      { label: "normal price", value: 1 },
-      { label: "2times", value: 2 },
-      { label: "4time", value: 4 },
-      { label: "6times", value: 6 },
-    ],
-  },
-  {
-    label: "Map marker style",
-    key: "isMapMarkerAsInHardMode",
-    options: [
-      { label: "default", value: false },
-      { label: "hard mode", value: true },
+      { label: "2x", value: 2 },
+      { label: "4x", value: 4 },
+      { label: "6x", value: 6 },
     ],
   },
   {
@@ -435,25 +346,11 @@ const RULE_DEFINITIONS = [
     ],
   },
   {
-    label: "Vehicle addon pricing",
-    key: "addonPricingFactor",
+    label: "DLC vehicles availability",
+    key: "needToAddDlcTrucks",
     options: [
-      { label: "default", value: 1 },
-      { label: "free", value: 0 },
-      { label: "2times", value: 2 },
-      { label: "4times", value: 4 },
-      { label: "6times", value: 6 },
-    ],
-  },
-  {
-    label: "Vehicle damage",
-    key: "vehicleDamageFactor",
-    options: [
-      { label: "default", value: 1 },
-      { label: "no damage", value: 0 },
-      { label: "2x", value: 2 },
-      { label: "3x", value: 3 },
-      { label: "5x", value: 5 },
+      { label: "available", value: true },
+      { label: "unavailable", value: false },
     ],
   },
   {
@@ -468,94 +365,113 @@ const RULE_DEFINITIONS = [
     ],
   },
   {
-    label: "Trailer pricing",
-    key: "trailerPricingFactor",
-    options: [
-      { label: "free", value: 0 },
-      { label: "normal price", value: 1 },
-      { label: "2x", value: 2 },
-      { label: "4x", value: 4 },
-      { label: "6x", value: 6 },
-    ],
-  },
-  {
     label: "External addon availability",
     key: "externalAddonAvailability",
     options: [
       { label: "default", value: 0 },
       { label: "all addons unlocked", value: 1 },
-      { label: "random 5", value: 2 },
-      { label: "random 10", value: 3 },
-      { label: "each garage random 10", value: 4 },
     ],
   },
   {
-    label: "Garage refuelling",
-    key: "isGarageRefuelAvailable",
+    label: "Internal addon availability",
+    key: "internalAddonAvailability",
     options: [
-      { label: "True", value: true },
-      { label: "False", value: false },
+      { label: "default", value: 0 },
+      { label: "all internal addons unlocked", value: 1 },
+      { label: "10-50 per garage", value: 2 },
+      { label: "30-100 per garage", value: 2 },
+      { label: "50-150 per garage", value: 2 },
+      { label: "0-100 per garage", value: 2 },
     ],
   },
   {
-    label: "Max contest attempts",
-    key: "maxContestAttempts",
-    options: [
-      { label: "default", value: -1 },
-      { label: "1 attempt", value: 1 },
-      { label: "3 attempt", value: 3 },
-      { label: "5 attempt", value: 5 },
-    ],
-  },
-  {
-    label: "Repair points required",
-    key: "repairPointsRequiredFactor",
+    label: "Tire availability",
+    key: "tyreAvailability",
     options: [
       { label: "default", value: 1 },
-      { label: "2x less", value: 0.5 },
+      { label: "all tires available", value: 0 },
+      { label: "highway and allroad", value: 2 },
+      { label: "highway, allroad, offroad", value: 3 },
+      { label: "no mud tires", value: 4 },
+      { label: "no chained tires", value: 5 },
+    ],
+  },
+  {
+    label: "Vehicle addon pricing",
+    key: "addonPricingFactor",
+    options: [
+      { label: "default", value: 1 },
+      { label: "free", value: 0 },
       { label: "2x", value: 2 },
       { label: "4x", value: 4 },
       { label: "6x", value: 6 },
     ],
   },
   {
-    label: "Repair points cost",
-    key: "repairPointsCostFactor",
+    label: "Addon selling price",
+    key: "addonSellingFactor",
     options: [
+      { label: "normal", value: 1.0 },
+      { label: "10%", value: 0.1 },
+      { label: "30%", value: 0.3 },
+      { label: "50%", value: 0.5 },
+      { label: "no refunds", value: 0 },
+    ],
+  },
+  {
+    label: "Trailer store availability",
+    key: "trailerStoreAviability",
+    options: [
+      { label: "default", value: 0 },
+      { label: "one random store per region", value: 1 },
+    ],
+  },
+  {
+    label: "Trailer availability",
+    key: "trailerAvailability",
+    options: [
+      { label: "default", value: 0 },
+      { label: "all trailers available", value: 1 },
+    ],
+  },
+  {
+    label: "Trailer pricing",
+    key: "trailerPricingFactor",
+    options: [
+      { label: "normal price", value: 1 },
       { label: "free", value: 0 },
-      { label: "default", value: 1 },
       { label: "2x", value: 2 },
       { label: "4x", value: 4 },
       { label: "6x", value: 6 },
     ],
   },
   {
-    label: "Region repair price",
-    key: "regionRepaireMoneyFactor",
+    label: "Trailer selling price",
+    key: "trailerSellingFactor",
     options: [
+      { label: "normal price", value: 1 },
+      { label: "50%", value: 0.5 },
+      { label: "30%", value: 0.3 },
+      { label: "10%", value: 0.1 },
+      { label: "cant be sold", value: -1 },
+    ],
+  },
+  {
+    label: "Fuel price",
+    key: "fuelPriceFactor",
+    options: [
+      { label: "default", value: 0 },
       { label: "free", value: 0 },
-      { label: "default", value: 1 },
       { label: "2x", value: 2 },
       { label: "4x", value: 4 },
       { label: "6x", value: 6 },
     ],
   },
   {
-    label: "Recovery price",
-    key: "recoveryPriceFactor",
+    label: "Garage repair price",
+    key: "garageRepairePriceFactor",
     options: [
-      { label: "free", value: 0 },
-      { label: "default", value: 1 },
-      { label: "2x", value: 2 },
-      { label: "4x", value: 4 },
-      { label: "6x", value: 6 },
-    ],
-  },
-  {
-    label: "Automatic cargo loading",
-    key: "loadingPriceFactor",
-    options: [
-      { label: "free", value: 0 },
+      { label: "default", value: 0 },
       { label: "paid", value: 1 },
       { label: "2x", value: 2 },
       { label: "4x", value: 4 },
@@ -563,11 +479,96 @@ const RULE_DEFINITIONS = [
     ],
   },
   {
+    label: "Garage refuelling",
+    key: "isGarageRefuelAvailable",
+    options: [
+      { label: "available", value: true },
+      { label: "unavailable", value: false },
+    ],
+  },
+  {
+    label: "Repair points cost",
+    key: "repairPointsCostFactor",
+    options: [
+      { label: "default", value: 1 },
+      { label: "paid", value: 1 },
+      { label: "2x", value: 2 },
+      { label: "4x", value: 4 },
+      { label: "6x", value: 6 },
+    ],
+  },
+  {
+    label: "Repair points required",
+    key: "repairPointsRequiredFactor",
+    options: [
+      { label: "default", value: 1 },
+      { label: "2x more effective", value: 0.5 },
+      { label: "2x", value: 2 },
+      { label: "4x", value: 4 },
+      { label: "6x", value: 6 },
+    ],
+  },
+  {
+    label: "Vehicle repair regional rules",
+    key: "regionRepaireMoneyFactor",
+    options: [
+      { label: "default", value: 1 },
+      { label: "2x outside home region", value: 2 },
+      { label: "3x outside home region", value: 3 },
+      { label: "4x outside home region", value: 4 },
+    ],
+  },
+  {
+    label: "Vehicle damage",
+    key: "vehicleDamageFactor",
+    options: [
+      { label: "default", value: 1 },
+      { label: "no damage", value: 0 },
+      { label: "2x", value: 2 },
+      { label: "3x", value: 3 },
+      { label: "5x", value: 5 },
+    ],
+  },
+  {
+    label: "Recovery price",
+    key: "recoveryPriceFactor",
+    options: [
+      { label: "default", value: 0 },
+      { label: "paid", value: 1 },
+      { label: "2x", value: 2 },
+      { label: "4x", value: 4 },
+      { label: "6x", value: 6 },
+      { label: "unavailable", value: -1 },
+    ],
+  },
+  {
+    label: "Automatic cargo loading",
+    key: "loadingPriceFactor",
+    options: [
+      { label: "default", value: 0 },
+      { label: "paid", value: 1 },
+      { label: "2x", value: 2 },
+      { label: "4x", value: 4 },
+      { label: "6x", value: 6 },
+    ],
+  },
+  {
+    label: "Truck switching price (minimap)",
+    key: "teleportationPrice",
+    options: [
+      { label: "free", value: 0 },
+      { label: "500", value: 500 },
+      { label: "1000", value: 1000 },
+      { label: "2000", value: 2000 },
+      { label: "5000", value: 5000 },
+    ],
+  },
+  {
     label: "Region traveling price",
     key: "regionTravellingPriceFactor",
     options: [
-      { label: "free", value: 0 },
-      { label: "default", value: 1 },
+      { label: "default", value: 0 },
+      { label: "paid", value: 1 },
       { label: "2x", value: 2 },
       { label: "4x", value: 4 },
       { label: "6x", value: 6 },
@@ -595,7 +596,103 @@ const RULE_DEFINITIONS = [
       { label: "300%", value: 3 },
     ],
   },
+  {
+    label: "Max contest attempts",
+    key: "maxContestAttempts",
+    options: [
+      { label: "default", value: 0 },
+      { label: "1 attempt", value: 1 },
+      { label: "3 attempts", value: 3 },
+      { label: "5 attempts", value: 5 },
+      { label: "gold time only", value: -1 },
+    ],
+  },
+  {
+    label: "Map marker style",
+    key: "isMapMarkerAsInHardMode",
+    options: [
+      { label: "default", value: false },
+      { label: "hard mode", value: true },
+    ],
+  },
 ];
+
+const INTERNAL_ADDON_AMOUNT_BY_LABEL = {
+  "10-50 per garage": 30,
+  "30-100 per garage": 65,
+  "50-150 per garage": 100,
+  "0-100 per garage": 50,
+};
+
+const RULE_NGP_DICT_META = {
+  truckAvailability: {
+    ngpKey: "TRUCK_AVAILABILITY",
+    labelToState: {
+      default: 0,
+      "all trucks available from start": 1,
+      "5-15 trucks in each garage": 2,
+      "store unlocks at rank 10": 3,
+      "store unlocks at rank 20": 4,
+      "store unlocks at rank 30": 5,
+      "store is locked": 6,
+    },
+  },
+  truckPricingFactor: { ngpKey: "TRUCK_PRICING", labelToState: { default: 0, free: 1, "2x": 2, "4x": 3, "6x": 4 } },
+  truckSellingFactor: { ngpKey: "TRUCK_SELLING", labelToState: { "normal price": 0, "50%": 1, "30%": 2, "10%": 3, "cant be sold": 4 } },
+  needToAddDlcTrucks: { ngpKey: "DLC_VEHICLES", labelToState: { available: 0, unavailable: 1 } },
+  vehicleStorageSlots: { ngpKey: "VEHICLE_STORAGE", labelToState: { default: 0, "only 3": 1, "only 5": 2, "only 10": 3, "only scouts": 4 } },
+  externalAddonAvailability: { ngpKey: "ADDON_AVAILABILITY", labelToState: { default: 0, "all addons unlocked": 1 } },
+  internalAddonAvailability: {
+    ngpKey: "INTENAL_ADDON_AVAILABILITY",
+    labelToState: {
+      default: 0,
+      "all internal addons unlocked": 1,
+      "10-50 per garage": 2,
+      "30-100 per garage": 3,
+      "50-150 per garage": 4,
+      "0-100 per garage": 5,
+    },
+  },
+  tyreAvailability: {
+    ngpKey: "TYRE_AVAILABILITY",
+    labelToState: {
+      default: 0,
+      "all tires available": 1,
+      "highway and allroad": 2,
+      "highway, allroad, offroad": 3,
+      "no mud tires": 4,
+      "no chained tires": 5,
+    },
+  },
+  trailerStoreAviability: { ngpKey: "TRAILER_STORE_AVAILBILITY", labelToState: { default: 0, "one random store per region": 1 } },
+  trailerAvailability: { ngpKey: "TRAILER_AVAILABILITY", labelToState: { default: 0, "all trailers available": 1 } },
+  trailerPricingFactor: { ngpKey: "TRAILER_PRICING", labelToState: { "normal price": 0, free: 1, "2x": 2, "4x": 3, "6x": 4 } },
+  trailerSellingFactor: { ngpKey: "TRAILER_SELLING", labelToState: { "normal price": 0, "50%": 1, "30%": 2, "10%": 3, "cant be sold": 4 } },
+  fuelPriceFactor: { ngpKey: "FUEL_PRICE", labelToState: { default: 0, free: 1, "2x": 2, "4x": 3, "6x": 4 } },
+  garageRepairePriceFactor: { ngpKey: "GARAGE_REPAIRE", labelToState: { default: 0, paid: 1, "2x": 2, "4x": 3, "6x": 4 } },
+  isGarageRefuelAvailable: { ngpKey: "GARAGE_REFUEL", labelToState: { available: 0, unavailable: 1 } },
+  repairPointsCostFactor: { ngpKey: "REPAIR_POINTS_COST", labelToState: { default: 0, paid: 1, "2x": 2, "4x": 3, "6x": 4 } },
+  repairPointsRequiredFactor: { ngpKey: "REPAIR_POINTS_AMOUNT", labelToState: { default: 0, "2x more effective": 1, "2x": 2, "4x": 3, "6x": 4 } },
+  regionRepaireMoneyFactor: {
+    ngpKey: "REGIONAL_REPAIR",
+    labelToState: {
+      default: 0,
+      "2x outside home region": 1,
+      "3x outside home region": 2,
+      "4x outside home region": 3,
+    },
+  },
+  vehicleDamageFactor: { ngpKey: "VEHICLE_DAMAGE", labelToState: { default: 0, "no damage": 1, "2x": 2, "3x": 3, "5x": 4 } },
+  recoveryPriceFactor: { ngpKey: "RECOVERY", labelToState: { default: 0, paid: 1, "2x": 2, "4x": 3, "6x": 4, unavailable: 5 } },
+  loadingPriceFactor: { ngpKey: "LOADING", labelToState: { default: 0, paid: 1, "2x": 2, "4x": 3, "6x": 4 } },
+  teleportationPrice: { ngpKey: "TELEPORTATION", labelToState: { free: 0, "500": 1, "1000": 2, "2000": 3, "5000": 4 } },
+  regionTravellingPriceFactor: { ngpKey: "REGION_TRAVELLING", labelToState: { default: 0, paid: 1, "2x": 2, "4x": 3, "6x": 4 } },
+  tasksAndContestsPayoutsFactor: { ngpKey: "TASKS_CONTESTS", labelToState: { normal: 0, "50%": 1, "150%": 2, "200%": 3, "300%": 4 } },
+  contractsPayoutsFactor: { ngpKey: "CONTRACTS", labelToState: { normal: 0, "50%": 1, "150%": 2, "200%": 3, "300%": 4 } },
+  maxContestAttempts: { ngpKey: "CONTEST_ATTEMPTS", labelToState: { default: 0, "1 attempt": 1, "3 attempts": 2, "5 attempts": 3, "gold time only": 4 } },
+  isMapMarkerAsInHardMode: { ngpKey: "MAP_MARKER", labelToState: { default: 0, "hard mode": 1 } },
+  addonPricingFactor: { ngpKey: "ADDON_PRICING", labelToState: { default: 0, free: 1, "2x": 2, "4x": 3, "6x": 4 } },
+};
 
 const OBJECTIVES_CATALOG_CSV_URL = "./assets/objectives_catalog.csv";
 const OBJECTIVES_CATALOG_SCRIPT_URL = "./assets/objectives_catalog.js?v=20260226-1";
@@ -617,6 +714,7 @@ const state = {
   selectors: {
     missions: null,
     contests: null,
+    regions: null,
     upgrades: null,
     watchtowers: null,
     discoveries: null,
@@ -629,11 +727,11 @@ const state = {
   },
   ui: {
     rankXpSyncLock: false,
+    showLegacyRegionActions: false,
   },
   objectives: {
     data: null,
     selected: new Set(),
-    reaccept: new Set(),
     visibleKeys: [],
     finishedInSave: new Set(),
     catalogKeys: new Set(),
@@ -648,10 +746,16 @@ const state = {
   rules: {
     controls: new Map(),
   },
+  regions: {
+    featureControls: new Map(),
+  },
   folder: {
     loaded: false,
     rootName: "",
+    sourceKind: "standard",
     files: new Map(),
+    rawFiles: new Map(),
+    wgsBlobByLogicalKey: new Map(),
   },
   improveShare: {
     uploading: false,
@@ -678,15 +782,6 @@ const state = {
     viewOffsetX: 0,
     viewOffsetY: 0,
     seasonChecks: new Map(),
-  },
-  vehicles: {
-    entries: [],
-    visibleEntryIds: [],
-    selected: new Set(),
-    files: new Map(),
-    loading: false,
-    loadedSlot: 0,
-    loadedForFolder: "",
   },
   trialChecks: new Map(),
 };
@@ -733,10 +828,15 @@ const els = {
   refreshObjectivesBtn: document.getElementById("refresh-objectives-btn"),
   selectObjectivesBtn: document.getElementById("select-objectives-btn"),
   clearObjectivesBtn: document.getElementById("clear-objectives-btn"),
-  acceptObjectivesBtn: document.getElementById("accept-objectives-btn"),
   completeObjectivesBtn: document.getElementById("complete-objectives-btn"),
   objectivesInfo: document.getElementById("objectives-info"),
   objectivesList: document.getElementById("objectives-list"),
+  regionsCheckAllBtn: document.getElementById("regions-check-all-btn"),
+  regionsClearBtn: document.getElementById("regions-clear-btn"),
+  regionsFeatureList: document.getElementById("regions-feature-list"),
+  regionsInfo: document.getElementById("regions-info"),
+  regionsShowLegacy: document.getElementById("regions-show-legacy"),
+  applyRegionsBtn: document.getElementById("apply-regions-btn"),
   unlockWatchBtn: document.getElementById("unlock-watchtowers-btn"),
   unlockDiscoveriesBtn: document.getElementById("unlock-discoveries-btn"),
   unlockLevelsBtn: document.getElementById("unlock-levels-btn"),
@@ -744,6 +844,7 @@ const els = {
   unlockUpgradesBtn: document.getElementById("unlock-upgrades-btn"),
   garageUpgradeAll: document.getElementById("garage-upgrade-all"),
   rulesEditor: document.getElementById("rules-editor"),
+  rulesRandom: document.getElementById("rules-random"),
   applyRulesBtn: document.getElementById("apply-rules-btn"),
   trialsList: document.getElementById("trials-list"),
   trialsSelectAllBtn: document.getElementById("trials-select-all-btn"),
@@ -769,34 +870,19 @@ const els = {
   fogCoverBtn: document.getElementById("fog-cover-btn"),
   fogUncoverBtn: document.getElementById("fog-uncover-btn"),
   fogAutoInfo: document.getElementById("fog-auto-info"),
-  vehiclesType: document.getElementById("vehicles-type"),
-  vehiclesRegion: document.getElementById("vehicles-region"),
-  vehiclesMap: document.getElementById("vehicles-map"),
-  vehiclesSearch: document.getElementById("vehicles-search"),
-  vehiclesLiftInput: document.getElementById("vehicles-lift-input"),
-  vehiclesXInput: document.getElementById("vehicles-x-input"),
-  vehiclesYInput: document.getElementById("vehicles-y-input"),
-  vehiclesZInput: document.getElementById("vehicles-z-input"),
-  refreshVehiclesBtn: document.getElementById("refresh-vehicles-btn"),
-  vehiclesSelectFilteredBtn: document.getElementById("vehicles-select-filtered-btn"),
-  vehiclesClearSelectionBtn: document.getElementById("vehicles-clear-selection-btn"),
-  vehiclesDeleteSelectedBtn: document.getElementById("vehicles-delete-selected-btn"),
-  vehiclesUnstuckBtn: document.getElementById("vehicles-unstuck-btn"),
-  vehiclesApplyXyzBtn: document.getElementById("vehicles-apply-xyz-btn"),
-  vehiclesInfo: document.getElementById("vehicles-info"),
-  vehiclesList: document.getElementById("vehicles-list"),
 };
-
-init();
 
 function init() {
   state.selectors.missions = buildSeasonMapSelector(document.getElementById("missions-selector"), "missions");
   state.selectors.contests = buildSeasonMapSelector(document.getElementById("contests-selector"), "contests");
+  state.selectors.regions = buildRegionSelector(document.getElementById("regions-selector"), "regions");
   state.selectors.upgrades = buildRegionSelector(document.getElementById("upgrades-selector"), "upgrades");
   state.selectors.watchtowers = buildRegionSelector(document.getElementById("watchtowers-selector"), "watchtowers");
   state.selectors.discoveries = buildRegionSelector(document.getElementById("discoveries-selector"), "discoveries");
   state.selectors.levels = buildRegionSelector(document.getElementById("levels-selector"), "levels");
   state.selectors.garages = buildRegionSelector(document.getElementById("garages-selector"), "garages");
+  buildRegionsFeatureEditor();
+  onRegionsLegacyToggleChanged();
   buildRulesEditor();
   renderRankXpTable();
   scheduleObjectivesCatalogWarmup();
@@ -811,7 +897,6 @@ function init() {
   updateMainSummary();
   refreshCommonTabs();
   refreshFogFileList();
-  renderVehiclesList();
   renderFogCanvas();
   checkRuntimeDependencies();
   scheduleAnalyticsInit();
@@ -868,12 +953,26 @@ function bindUi() {
   els.refreshObjectivesBtn.addEventListener("click", refreshObjectivesFromMain);
   els.selectObjectivesBtn.addEventListener("click", selectVisibleObjectives);
   els.clearObjectivesBtn.addEventListener("click", clearObjectiveSelection);
-  els.acceptObjectivesBtn.addEventListener("click", acceptSelectedObjectivesTasks);
   els.completeObjectivesBtn.addEventListener("click", completeSelectedObjectives);
   els.objectivesSearch.addEventListener("input", renderObjectivesList);
   els.objectivesType.addEventListener("change", renderObjectivesList);
   els.objectivesRegion.addEventListener("change", renderObjectivesList);
   els.objectivesCategory.addEventListener("change", renderObjectivesList);
+  if (els.regionsCheckAllBtn) {
+    els.regionsCheckAllBtn.addEventListener("click", () => setAllRegionsFeatures(true));
+  }
+  if (els.regionsClearBtn) {
+    els.regionsClearBtn.addEventListener("click", () => setAllRegionsFeatures(false));
+  }
+  if (els.regionsShowLegacy) {
+    els.regionsShowLegacy.addEventListener("change", onRegionsLegacyToggleChanged);
+  }
+  if (els.applyRegionsBtn) {
+    els.applyRegionsBtn.addEventListener("click", onApplyRegions);
+  }
+  if (els.rulesRandom) {
+    els.rulesRandom.addEventListener("change", onRulesRandomToggleChanged);
+  }
   els.applyRulesBtn.addEventListener("click", onApplyRules);
 
   els.trialsSelectAllBtn.addEventListener("click", () => setAllTrials(true));
@@ -894,28 +993,6 @@ function bindUi() {
   bindAsyncUiAction(els.fogFileSelect, "Open fog file", onOpenSelectedFogFile, "change");
   bindAsyncUiAction(els.fogCoverBtn, "Fog automation cover", () => runFogAutomation("cover"));
   bindAsyncUiAction(els.fogUncoverBtn, "Fog automation uncover", () => runFogAutomation("uncover"));
-  bindAsyncUiAction(els.refreshVehiclesBtn, "Refresh vehicles", () => loadVehiclesFromFolder(true));
-  bindAsyncUiAction(els.vehiclesUnstuckBtn, "Vehicles unstuck", onVehiclesUnstuckSelected);
-  bindAsyncUiAction(els.vehiclesApplyXyzBtn, "Vehicles apply XYZ", onVehiclesApplyCustomXyz);
-  bindAsyncUiAction(els.vehiclesDeleteSelectedBtn, "Vehicles delete", onVehiclesDeleteSelected);
-  if (els.vehiclesSelectFilteredBtn) {
-    els.vehiclesSelectFilteredBtn.addEventListener("click", selectVisibleVehicles);
-  }
-  if (els.vehiclesClearSelectionBtn) {
-    els.vehiclesClearSelectionBtn.addEventListener("click", clearVehicleSelection);
-  }
-  if (els.vehiclesType) {
-    els.vehiclesType.addEventListener("change", renderVehiclesList);
-  }
-  if (els.vehiclesRegion) {
-    els.vehiclesRegion.addEventListener("change", renderVehiclesList);
-  }
-  if (els.vehiclesMap) {
-    els.vehiclesMap.addEventListener("change", renderVehiclesList);
-  }
-  if (els.vehiclesSearch) {
-    els.vehiclesSearch.addEventListener("input", renderVehiclesList);
-  }
 
   const fogCanvas = els.fogCanvas;
   if (fogCanvas) {
@@ -1107,41 +1184,409 @@ async function onSingleFileSelected() {
   }
 }
 
+function normalizeRelativePath(path) {
+  return String(path || "").replace(/\\/g, "/").replace(/^\/+|\/+$/g, "");
+}
+
+function joinRelativePath(...parts) {
+  return parts
+    .map((part) => normalizeRelativePath(part))
+    .filter(Boolean)
+    .join("/");
+}
+
+function stripFolderRoot(relativePath, rootName) {
+  const normalized = normalizeRelativePath(relativePath);
+  const root = normalizeRelativePath(rootName);
+  if (!root) {
+    return normalized;
+  }
+  const lower = normalized.toLowerCase();
+  const rootLower = root.toLowerCase();
+  if (lower === rootLower) {
+    return "";
+  }
+  if (lower.startsWith(`${rootLower}/`)) {
+    return normalized.slice(root.length + 1);
+  }
+  return normalized;
+}
+
+function isSameOrChildRelative(path, parent) {
+  const normalizedPath = normalizeRelativePath(path).toLowerCase();
+  const normalizedParent = normalizeRelativePath(parent).toLowerCase();
+  if (!normalizedParent) {
+    return true;
+  }
+  return normalizedPath === normalizedParent || normalizedPath.startsWith(`${normalizedParent}/`);
+}
+
+function buildUploadedFolderEntries(files) {
+  const relativePaths = (files || []).map((file) => String(file.webkitRelativePath || file.name || ""));
+  const rootName = detectFolderRoot(relativePaths);
+  return Promise.all((files || []).map(async (file) => {
+    const relPath = normalizeRelativePath(file.webkitRelativePath || file.name || "");
+    const bytes = new Uint8Array(await file.arrayBuffer());
+    const relPathNoRoot = stripFolderRoot(relPath, rootName);
+    return {
+      key: String(relPathNoRoot || relPath || file.name).toLowerCase(),
+      relPath,
+      relPathNoRoot,
+      name: getFileBasename(relPath || file.name),
+      bytes,
+      dirty: false,
+    };
+  })).then((entries) => ({ rootName, entries }));
+}
+
+function containsWgsMarkers(entries) {
+  return (entries || []).some((entry) => {
+    const lower = String(entry && entry.name ? entry.name : "").toLowerCase();
+    return lower === "containers.index" || lower.startsWith("container.");
+  });
+}
+
+function buildRawEntryLookup(entries) {
+  const out = new Map();
+  for (const entry of entries || []) {
+    const key = String(entry && (entry.relPathNoRoot || entry.relPath || entry.name) ? (entry.relPathNoRoot || entry.relPath || entry.name) : "").toLowerCase();
+    if (!key || out.has(key)) {
+      continue;
+    }
+    out.set(key, entry);
+  }
+  return out;
+}
+
+function findRawEntry(entriesMap, relativePath) {
+  if (!(entriesMap instanceof Map)) {
+    return null;
+  }
+  return entriesMap.get(String(normalizeRelativePath(relativePath)).toLowerCase()) || null;
+}
+
+function discoverWgsCandidates(entries) {
+  const userDirs = new Set();
+  const containerDirs = new Set();
+  for (const entry of entries || []) {
+    const rel = normalizeRelativePath(entry && entry.relPathNoRoot ? entry.relPathNoRoot : "");
+    const base = getFileBasename(rel).toLowerCase();
+    const dir = normalizeRelativePath(rel.slice(0, Math.max(0, rel.length - base.length)).replace(/\/$/, ""));
+    if (base === "containers.index") {
+      userDirs.add(dir);
+    } else if (base.startsWith("container.")) {
+      containerDirs.add(dir);
+    }
+  }
+  const userList = [...userDirs];
+  if (userList.length > 0) {
+    return userList.map((path) => ({ kind: "user_dir", path }));
+  }
+  const filteredContainers = [...containerDirs].filter((dir) => !userList.some((userDir) => isSameOrChildRelative(dir, userDir)));
+  return filteredContainers.map((path) => ({ kind: "container_dir", path }));
+}
+
+function readUint32LE(view, offset) {
+  return view.getUint32(offset, true);
+}
+
+function readInt32LE(view, offset) {
+  return view.getInt32(offset, true);
+}
+
+function bytesToHex(bytes) {
+  return Array.from(bytes || [], (value) => value.toString(16).padStart(2, "0")).join("").toUpperCase();
+}
+
+function readUtf16LeString(view, cursor, fixedChars = null) {
+  let charCount = fixedChars;
+  if (charCount == null) {
+    if (cursor.offset + 4 > view.byteLength) {
+      throw new Error("Unexpected end of WGS data while reading string length.");
+    }
+    charCount = readInt32LE(view, cursor.offset);
+    cursor.offset += 4;
+  }
+  const byteLength = Math.max(0, Number(charCount) || 0) * 2;
+  if (cursor.offset + byteLength > view.byteLength) {
+    throw new Error("Unexpected end of WGS data while reading UTF-16 string.");
+  }
+  const bytes = new Uint8Array(view.buffer, view.byteOffset + cursor.offset, byteLength);
+  cursor.offset += byteLength;
+  return new TextDecoder("utf-16le").decode(bytes).replace(/\0+$/g, "");
+}
+
+function readFiletime(view, cursor) {
+  if (cursor.offset + 8 > view.byteLength) {
+    throw new Error("Unexpected end of WGS data while reading FILETIME.");
+  }
+  cursor.offset += 8;
+}
+
+function readGuidHexLe(view, cursor) {
+  if (cursor.offset + 16 > view.byteLength) {
+    throw new Error("Unexpected end of WGS data while reading GUID.");
+  }
+  const raw = new Uint8Array(view.buffer, view.byteOffset + cursor.offset, 16);
+  cursor.offset += 16;
+  const reordered = new Uint8Array(16);
+  reordered.set([raw[3], raw[2], raw[1], raw[0]], 0);
+  reordered.set([raw[5], raw[4]], 4);
+  reordered.set([raw[7], raw[6]], 6);
+  reordered.set(raw.subarray(8, 16), 8);
+  return bytesToHex(reordered);
+}
+
+function pickWgsBlobRelativePath(entriesMap, containerDir, guidA, guidB) {
+  const pathA = joinRelativePath(containerDir, guidA);
+  const pathB = joinRelativePath(containerDir, guidB);
+  const entryA = findRawEntry(entriesMap, pathA);
+  const entryB = findRawEntry(entriesMap, pathB);
+  if (guidA === guidB) {
+    return entryA ? pathA : null;
+  }
+  if (entryA && !entryB) {
+    return pathA;
+  }
+  if (entryB && !entryA) {
+    return pathB;
+  }
+  if (entryB) {
+    return pathB;
+  }
+  if (entryA) {
+    return pathA;
+  }
+  return null;
+}
+
+function readWgsContainerEntries(containerEntry, containerDir, entriesMap) {
+  const view = new DataView(containerEntry.bytes.buffer, containerEntry.bytes.byteOffset, containerEntry.bytes.byteLength);
+  const cursor = { offset: 0 };
+  if (view.byteLength < 8) {
+    throw new Error(`Container file is incomplete: ${containerEntry.relPath}`);
+  }
+  cursor.offset += 4;
+  const fileCount = readInt32LE(view, cursor.offset);
+  cursor.offset += 4;
+  const out = [];
+  for (let i = 0; i < fileCount; i += 1) {
+    const logicalName = readUtf16LeString(view, cursor, 64);
+    const guidA = readGuidHexLe(view, cursor);
+    const guidB = readGuidHexLe(view, cursor);
+    const blobRelPath = pickWgsBlobRelativePath(entriesMap, containerDir, guidA, guidB);
+    out.push({
+      logicalName,
+      blobRelPath,
+      containerRelPath: containerEntry.relPathNoRoot || containerEntry.relPath,
+    });
+  }
+  return out;
+}
+
+function readWgsUserDirEntries(candidatePath, entriesMap) {
+  const indexEntry = findRawEntry(entriesMap, joinRelativePath(candidatePath, "containers.index"));
+  if (!indexEntry) {
+    throw new Error("The selected WGS user folder is missing containers.index.");
+  }
+  const view = new DataView(indexEntry.bytes.buffer, indexEntry.bytes.byteOffset, indexEntry.bytes.byteLength);
+  const cursor = { offset: 0 };
+  if (view.byteLength < 8) {
+    throw new Error("The WGS containers.index file is incomplete.");
+  }
+  cursor.offset += 4;
+  const containerCount = readInt32LE(view, cursor.offset);
+  cursor.offset += 4;
+  readUtf16LeString(view, cursor);
+  const packageName = readUtf16LeString(view, cursor).split("!")[0];
+  readFiletime(view, cursor);
+  if (cursor.offset + 4 > view.byteLength) {
+    throw new Error("The WGS containers.index file is incomplete.");
+  }
+  cursor.offset += 4;
+  readUtf16LeString(view, cursor);
+  if (cursor.offset + 8 > view.byteLength) {
+    throw new Error("The WGS containers.index file is incomplete.");
+  }
+  cursor.offset += 8;
+
+  const out = [];
+  for (let i = 0; i < containerCount; i += 1) {
+    readUtf16LeString(view, cursor);
+    readUtf16LeString(view, cursor);
+    readUtf16LeString(view, cursor);
+    if (cursor.offset + 1 > view.byteLength) {
+      throw new Error("The WGS containers.index file is incomplete.");
+    }
+    const containerNum = view.getUint8(cursor.offset);
+    cursor.offset += 1;
+    if (cursor.offset + 4 > view.byteLength) {
+      throw new Error("The WGS containers.index file is incomplete.");
+    }
+    cursor.offset += 4;
+    const containerGuid = readGuidHexLe(view, cursor);
+    readFiletime(view, cursor);
+    if (cursor.offset + 16 > view.byteLength) {
+      throw new Error("The WGS containers.index file is incomplete.");
+    }
+    cursor.offset += 16;
+
+    const containerDir = joinRelativePath(candidatePath, containerGuid);
+    const containerRelPath = joinRelativePath(containerDir, `container.${containerNum}`);
+    const containerEntry = findRawEntry(entriesMap, containerRelPath);
+    if (!containerEntry) {
+      continue;
+    }
+    out.push(...readWgsContainerEntries(containerEntry, containerDir, entriesMap));
+  }
+
+  if (packageName && !packageName.toLowerCase().includes("snowrunner")) {
+    throw new Error(`The selected WGS user folder belongs to a different package: ${packageName}`);
+  }
+  return out;
+}
+
+function readWgsContainerDirEntries(candidatePath, entriesMap) {
+  const out = [];
+  for (const entry of entriesMap.values()) {
+    const rel = normalizeRelativePath(entry && entry.relPathNoRoot ? entry.relPathNoRoot : "");
+    const base = getFileBasename(rel).toLowerCase();
+    const dir = normalizeRelativePath(rel.slice(0, Math.max(0, rel.length - base.length)).replace(/\/$/, ""));
+    if (dir !== normalizeRelativePath(candidatePath) || !base.startsWith("container.")) {
+      continue;
+    }
+    out.push(...readWgsContainerEntries(entry, candidatePath, entriesMap));
+  }
+  if (out.length === 0) {
+    throw new Error("The selected folder does not contain any WGS container files.");
+  }
+  return out;
+}
+
+function wgsLogicalNameToRelativePath(logicalName) {
+  const text = String(logicalName || "").replace(/\0/g, "").trim();
+  if (!text) {
+    return "";
+  }
+  const parts = [];
+  for (const chunk of text.split(/[\\/]+/)) {
+    const trimmed = chunk.trim();
+    if (!trimmed || trimmed === "." || trimmed === "..") {
+      continue;
+    }
+    parts.push(trimmed.replace(/[<>:"|?*]/g, "_"));
+  }
+  if (parts.length === 0) {
+    return "";
+  }
+  let rel = parts.join("/");
+  if (!/\.[A-Za-z0-9]+$/.test(rel)) {
+    rel += ".cfg";
+  }
+  return rel;
+}
+
+function decodeWgsFolder(entries, rootName) {
+  const candidates = discoverWgsCandidates(entries);
+  if (candidates.length === 0) {
+    return null;
+  }
+  if (candidates.length > 1) {
+    const summary = candidates.map((item) => item.path || "<selected folder>").join(", ");
+    throw new Error(`Multiple WGS save sources were found in the uploaded folder. Upload a single WGS user folder or container folder. Found: ${summary}`);
+  }
+
+  const candidate = candidates[0];
+  const entriesMap = buildRawEntryLookup(entries);
+  const logicalEntries = candidate.kind === "user_dir"
+    ? readWgsUserDirEntries(candidate.path, entriesMap)
+    : readWgsContainerDirEntries(candidate.path, entriesMap);
+
+  const virtualEntries = [];
+  const wgsBlobByLogicalKey = new Map();
+  const seenLogical = new Set();
+  for (const item of logicalEntries) {
+    const relPath = wgsLogicalNameToRelativePath(item.logicalName);
+    const blobRelPath = normalizeRelativePath(item.blobRelPath);
+    if (!relPath || !blobRelPath) {
+      continue;
+    }
+    const blobEntry = findRawEntry(entriesMap, blobRelPath);
+    if (!blobEntry) {
+      continue;
+    }
+    const key = relPath.toLowerCase();
+    if (seenLogical.has(key)) {
+      continue;
+    }
+    seenLogical.add(key);
+    virtualEntries.push({
+      key,
+      relPath,
+      relPathNoRoot: relPath,
+      name: getFileBasename(relPath),
+      bytes: new Uint8Array(blobEntry.bytes),
+      dirty: false,
+    });
+    wgsBlobByLogicalKey.set(key, blobRelPath);
+  }
+
+  if (virtualEntries.length === 0) {
+    throw new Error("The selected WGS folder was decoded, but no readable SnowRunner save files were found.");
+  }
+
+  return {
+    rootName,
+    sourceKind: "wgs",
+    files: virtualEntries,
+    rawFiles: entries,
+    wgsBlobByLogicalKey,
+  };
+}
+
 async function onFolderSelected() {
   const files = els.folderInput.files ? [...els.folderInput.files] : [];
   if (files.length === 0) {
     return;
   }
   try {
-    const acceptedFiles = files.filter((file) => isTopLevelFolderFile(String(file.webkitRelativePath || file.name || "")));
-    const ignoredCount = Math.max(0, files.length - acceptedFiles.length);
-    const entries = [];
-    for (const file of acceptedFiles) {
-      const relPath = String(file.webkitRelativePath || file.name || "").replace(/\\/g, "/");
-      const bytes = new Uint8Array(await file.arrayBuffer());
-      const name = getFileBasename(relPath || file.name);
-      entries.push({
-        key: String(relPath || file.name).toLowerCase(),
-        relPath: relPath || file.name,
-        name,
-        bytes,
-        dirty: false,
-      });
-    }
+    const rawPayload = await buildUploadedFolderEntries(files);
+    const allEntries = rawPayload.entries;
+    const rootName = rawPayload.rootName;
+    const hasWgsMarkers = containsWgsMarkers(allEntries);
+    const wgsPayload = hasWgsMarkers ? decodeWgsFolder(allEntries, rootName) : null;
+
+    const acceptedFiles = wgsPayload
+      ? wgsPayload.files
+      : allEntries.filter((entry) => isTopLevelFolderFile(entry.relPath));
+    const ignoredCount = wgsPayload ? 0 : Math.max(0, files.length - acceptedFiles.length);
+
     state.folder.files.clear();
-    for (const entry of entries) {
+    state.folder.rawFiles.clear();
+    state.folder.wgsBlobByLogicalKey.clear();
+    for (const entry of acceptedFiles) {
       state.folder.files.set(entry.key, entry);
     }
+    if (wgsPayload) {
+      for (const entry of wgsPayload.rawFiles) {
+        state.folder.rawFiles.set(String(entry.relPathNoRoot || entry.relPath || entry.name).toLowerCase(), entry);
+      }
+      for (const [logicalKey, blobRelPath] of wgsPayload.wgsBlobByLogicalKey.entries()) {
+        state.folder.wgsBlobByLogicalKey.set(logicalKey, blobRelPath);
+      }
+      state.folder.sourceKind = "wgs";
+    } else {
+      state.folder.sourceKind = "standard";
+    }
     state.folder.loaded = true;
-    state.folder.rootName = detectFolderRoot(entries.map((item) => item.relPath));
-    invalidateVehiclesCache("Folder loaded. Open Vehicles tab or click Refresh STS list.");
+    state.folder.rootName = rootName;
     state.improveShare.preferredSource = "folder";
     state.improveShare.lastUploadedSignature = "";
     updateFolderMeta();
-    refreshFolderMainChoices(entries);
+    refreshFolderMainChoices(acceptedFiles);
     refreshFogFileList();
 
-    const mainEntries = getMainFolderEntries(entries);
+    const mainEntries = getMainFolderEntries(acceptedFiles);
     if (mainEntries.length === 1) {
       const onlyMain = mainEntries[0];
       const text = decodeBytesToText(onlyMain.bytes);
@@ -1152,7 +1597,7 @@ async function onFolderSelected() {
       updateMainSummary();
       updateDownloadButtons();
     }
-    const commonEntry = pickCommonEntryFromFolder(entries);
+    const commonEntry = pickCommonEntryFromFolder(acceptedFiles);
     if (commonEntry) {
       const text = decodeBytesToText(commonEntry.bytes);
       setCommonFromText(commonEntry.name, text, commonEntry.key);
@@ -1161,21 +1606,21 @@ async function onFolderSelected() {
     const fogCount = getFogFolderEntries().length;
     let folderStatusMessage = "";
     let folderStatusType = "success";
-    if (mainEntries.length > 1) {
-      folderStatusMessage = `Loaded folder: ${entries.length} top-level files (${fogCount} fog files). Ignored ${ignoredCount} subfolder file(s). Pick your CompleteSave* file below Upload Save Folder or File.`;
+    if (wgsPayload) {
+      folderStatusMessage = `Loaded WGS folder: decoded ${acceptedFiles.length} logical files from ${allEntries.length} uploaded files (${fogCount} fog files detected). Download Folder will rebuild the WGS layout as a zip.`;
+      folderStatusType = "success";
+    } else if (mainEntries.length > 1) {
+      folderStatusMessage = `Loaded folder: ${acceptedFiles.length} top-level files (${fogCount} fog files). Ignored ${ignoredCount} subfolder file(s). Pick your CompleteSave* file below Upload Save Folder or File.`;
       folderStatusType = "info";
     } else {
-      folderStatusMessage = `Loaded folder: ${entries.length} top-level files (${fogCount} fog files detected). Ignored ${ignoredCount} subfolder file(s).`;
+      folderStatusMessage = `Loaded folder: ${acceptedFiles.length} top-level files (${fogCount} fog files detected). Ignored ${ignoredCount} subfolder file(s).`;
     }
     const warningSuffix = getMainVersionWarningSuffix();
     if (warningSuffix) {
       folderStatusMessage += warningSuffix;
     }
     setStatus(folderStatusMessage, folderStatusType);
-    if (document.querySelector(".tab-btn.active")?.dataset?.tab === "vehicles") {
-      await loadVehiclesFromFolder(true);
-    }
-    await maybeUploadImproveSamples(entries);
+    await maybeUploadImproveSamples(acceptedFiles);
   } catch (error) {
     setStatus(`Failed to load folder: ${error.message}`, "error");
   } finally {
@@ -1201,9 +1646,6 @@ function activateTab(tab) {
     ensurePakoLoaded();
     refreshFogFileList();
     renderFogCanvas();
-  }
-  if (tab === "vehicles") {
-    loadVehiclesFromFolder(false);
   }
   if (tab === "trials" || tab === "pros" || tab === "achievements") {
     refreshCommonTabs();
@@ -1243,7 +1685,8 @@ function updateFolderMeta() {
   }
   const fogCount = getFogFolderEntries().length;
   const root = state.folder.rootName ? `${state.folder.rootName} • ` : "";
-  els.folderMeta.textContent = `${root}${state.folder.files.size} files • ${fogCount} fog files • ${edited} edited`;
+  const sourceLabel = state.folder.sourceKind === "wgs" ? "WGS decoded • " : "";
+  els.folderMeta.textContent = `${root}${sourceLabel}${state.folder.files.size} files • ${fogCount} fog files • ${edited} edited`;
 }
 
 function refreshFolderMainChoices(entriesOverride) {
@@ -1255,7 +1698,7 @@ function refreshFolderMainChoices(entriesOverride) {
   if (entries.length === 0) {
     const text = document.createElement("span");
     text.className = "meta";
-    text.textContent = "No CompleteSave*.cfg/.dat files detected.";
+    text.textContent = "No CompleteSave*.cfg/.dat files or decoded WGS main saves detected.";
     els.folderMainChoices.append(text);
     return;
   }
@@ -1397,15 +1840,9 @@ function updateMainSummary() {
     els.gameStatList.innerHTML = "";
     state.objectives.data = null;
     state.objectives.selected.clear();
-    state.objectives.reaccept.clear();
     state.objectives.visibleKeys = [];
     renderObjectivesList();
     hydrateRulesFromMain();
-    if (state.vehicles.entries.length > 0) {
-      invalidateVehiclesCache("Load or select a CompleteSave file first.");
-    } else {
-      renderVehiclesList();
-    }
     return;
   }
   try {
@@ -1435,7 +1872,6 @@ function updateMainSummary() {
   refreshGameStatsEditor();
   refreshObjectivesFromMain();
   hydrateRulesFromMain();
-  refreshVehiclesSlotState();
 }
 
 function refreshCommonTabs() {
@@ -1539,10 +1975,25 @@ async function downloadFolderZip() {
   }
   try {
     const zip = new window.JSZip();
-    for (const entry of state.folder.files.values()) {
-      zip.file(entry.relPath || entry.name, entry.bytes);
+    if (state.folder.sourceKind === "wgs") {
+      const blobOverrides = new Map();
+      for (const entry of state.folder.files.values()) {
+        const blobRelPath = state.folder.wgsBlobByLogicalKey.get(String(entry.key || "").toLowerCase());
+        if (blobRelPath) {
+          blobOverrides.set(String(blobRelPath).toLowerCase(), entry.bytes);
+        }
+      }
+      for (const rawEntry of state.folder.rawFiles.values()) {
+        const relPath = rawEntry.relPath || rawEntry.name;
+        const override = blobOverrides.get(String(rawEntry.relPathNoRoot || rawEntry.relPath || rawEntry.name).toLowerCase());
+        zip.file(relPath, override || rawEntry.bytes);
+      }
+    } else {
+      for (const entry of state.folder.files.values()) {
+        zip.file(entry.relPath || entry.name, entry.bytes);
+      }
     }
-    const root = state.folder.rootName || "save-folder";
+    const root = state.folder.rootName || (state.folder.sourceKind === "wgs" ? "wgs-save" : "save-folder");
     const filename = `${root}.zip`;
     const blob = await zip.generateAsync({
       type: "blob",
@@ -1575,1356 +2026,6 @@ function triggerBlobDownload(filename, blob) {
   a.remove();
   setTimeout(() => URL.revokeObjectURL(url), 0);
   setStatus(`Downloaded ${filename}`, "success");
-}
-
-const VEHICLE_KNOWN_TRUCK_IDS = new Set([
-  "ank_mk38",
-  "ank_mk38_ht",
-  "azov_5319",
-  "azov_64131",
-  "azov_73210",
-  "boar_45318",
-  "cat_745c",
-  "cat_ct680",
-  "chevrolet_ck1500",
-  "chevrolet_kodiakc70",
-  "dan_96320",
-  "derry_longhorn_3194",
-  "derry_longhorn_4520",
-  "ford_clt9000",
-  "freightliner_114sd",
-  "freightliner_m916a1",
-  "gmc_9500",
-  "hummer_h2",
-  "international_fleetstar_f2070a",
-  "international_loadstar_1700",
-  "international_paystar_5070",
-  "international_scout_800",
-  "international_transtar_4070a",
-  "kenworth_c500",
-  "khan_lo4f",
-  "kolob_74760",
-  "kolob_74941",
-  "mack_defense_m917",
-  "navistar_5000_mv",
-  "pacific_p12w",
-  "pacific_p16",
-  "royal_bm17",
-  "step_310e",
-  "tatra_t813",
-  "tatra_t815_7",
-  "tayga_6436",
-  "tuz_166",
-  "tuz_420_tatarin",
-  "voron_ae4380",
-  "voron_d53233",
-  "voron_grad",
-  "ws_4964_white",
-  "ws_6900xd_twin",
-  "yar_87",
-  "zikz_5368",
-  "zikz_612h_mastodont",
-]);
-
-const VEHICLE_BRAND_HINTS = new Set([
-  "ank", "azov", "boar", "cat", "chevrolet", "dan", "derry", "don", "femm", "ford",
-  "freightliner", "futom", "gmc", "hummer", "international", "jangsu", "jeep", "kenworth",
-  "khan", "kolob", "krs", "land", "mack", "navistar", "pacific", "rezvani", "royal", "step",
-  "tatra", "tayga", "tuz", "voron", "western", "chevy", "ws", "yar", "zikz", "aramatsu",
-  "burlak", "kirovets", "mercer", "neo", "sleiter",
-]);
-
-const VEHICLE_ID_BLOCKLIST_PARTS = [
-  "engine", "gearbox", "suspension", "wheels", "rim_", "tires", "tire", "transferbox",
-  "diff_lock", "bumper", "snorkel", "roofrack", "gabarite", "headlight", "horn", "paint",
-  "addon", "cabin", "grill", "cargo_", "bone", "sticker", "stuff_", "airfreshener",
-];
-
-const STS_COMPONENT_TYPE_BLOCKLIST_PARTS = [
-  "_default",
-  "_fender_",
-  "exhaust",
-  "threshold",
-  "treshhold",
-  "spotlight",
-  "lightbar",
-  "wheel_addon",
-  "wheel_default",
-  "diff_lock",
-  "mudguard",
-  "mud_guards",
-  "bumper_",
-  "paint_",
-  "decal_",
-];
-
-const GUID_TEXT_RE = /^\{[0-9a-fA-F-]{36}\}$/;
-
-function invalidateVehiclesCache(message) {
-  state.vehicles.entries = [];
-  state.vehicles.visibleEntryIds = [];
-  state.vehicles.selected.clear();
-  state.vehicles.files.clear();
-  state.vehicles.loading = false;
-  state.vehicles.loadedSlot = 0;
-  state.vehicles.loadedForFolder = "";
-  if (els.vehiclesInfo && message) {
-    els.vehiclesInfo.textContent = String(message);
-  }
-  renderVehiclesList();
-}
-
-function getCurrentSaveSlotNumber() {
-  if (!state.main || !state.main.name) {
-    return 1;
-  }
-  const idx = extractCompleteSaveIndex(state.main.name);
-  if (!Number.isFinite(idx) || idx < 0 || idx > 3) {
-    return 1;
-  }
-  return idx + 1;
-}
-
-function buildVehiclesFolderSignature() {
-  if (!state.folder.loaded) {
-    return "";
-  }
-  return `${String(state.folder.rootName || "").toLowerCase()}|${state.folder.files.size}`;
-}
-
-function refreshVehiclesSlotState() {
-  if (!state.vehicles.entries.length) {
-    renderVehiclesList();
-    return;
-  }
-  const slot = getCurrentSaveSlotNumber();
-  const folderSignature = buildVehiclesFolderSignature();
-  if (slot !== state.vehicles.loadedSlot || folderSignature !== state.vehicles.loadedForFolder) {
-    invalidateVehiclesCache("Main slot or folder changed. Open Vehicles tab or click Refresh STS list.");
-  }
-}
-
-function isStsFilenameForSlot(name, slot) {
-  const base = getFileBasename(name).toLowerCase();
-  if (!base.endsWith(".cfg") && !base.endsWith(".dat")) {
-    return false;
-  }
-  const prefix = slot <= 1 ? "" : `${slot - 1}_`;
-  return base.startsWith(`${prefix}sts_level_`);
-}
-
-function mapIdFromStsFilename(name) {
-  const base = getFileBasename(name);
-  const m = /^(?:\d+_)?sts_level_(.+?)\.(?:cfg|dat)$/i.exec(base);
-  if (!m) {
-    return "";
-  }
-  return String(m[1] || "").toUpperCase();
-}
-
-function normalizeMapId(raw) {
-  let text = String(raw || "").trim().toUpperCase();
-  if (text.startsWith("LEVEL_")) {
-    text = text.slice(6);
-  }
-  return text;
-}
-
-function regionCodeFromMapId(mapId) {
-  const mid = normalizeMapId(mapId);
-  const parts = mid.split("_").filter(Boolean);
-  if (parts.length >= 2 && (parts[0] === "US" || parts[0] === "RU") && /^[0-9]+$/.test(parts[1])) {
-    return `${parts[0]}_${parts[1]}`;
-  }
-  if (parts.length > 0 && parts[0] === "TRIAL") {
-    return "TRIALS";
-  }
-  return "";
-}
-
-function regionNameFromCode(code) {
-  const key = String(code || "").trim().toUpperCase();
-  if (!key) {
-    return "";
-  }
-  if (Object.prototype.hasOwnProperty.call(REGION_LONG_NAME_MAP, key)) {
-    return REGION_LONG_NAME_MAP[key];
-  }
-  if (key === "TRIALS") {
-    return "Trials";
-  }
-  return key;
-}
-
-function mapHumanizeSlug(value) {
-  const token = String(value || "").trim().replace(/[-_]+/g, " ");
-  return token
-    .split(" ")
-    .filter(Boolean)
-    .map((part) => part.charAt(0).toUpperCase() + part.slice(1).toLowerCase())
-    .join(" ");
-}
-
-function mapDisplayInfo(mapIdRaw) {
-  const mapId = normalizeMapId(mapIdRaw);
-  const regionCode = regionCodeFromMapId(mapId);
-  const regionName = regionNameFromCode(regionCode);
-  const prettyMapName = mapHumanizeSlug(mapId) || mapId;
-  return {
-    mapId,
-    regionCode,
-    regionName: regionName || regionCode || "",
-    mapName: prettyMapName,
-  };
-}
-
-function vehicleHumanizeTypeId(rawTypeId) {
-  const text = String(rawTypeId || "").trim();
-  if (!text) {
-    return "";
-  }
-  if (GUID_TEXT_RE.test(text)) {
-    return text;
-  }
-  let token = text.split("/").pop() || text;
-  token = token.replace(/[_-]+/g, " ").replace(/\s+/g, " ").trim();
-  if (!token) {
-    return text;
-  }
-  return token
-    .split(" ")
-    .map((word) => (/^[0-9]+$/.test(word) ? word : `${word.charAt(0).toUpperCase()}${word.slice(1).toLowerCase()}`))
-    .join(" ");
-}
-
-function isProbableTruckTypeId(typeIdRaw) {
-  const typeId = String(typeIdRaw || "").trim().toLowerCase();
-  if (!typeId || typeId.includes("trailer")) {
-    return false;
-  }
-  if (!/^[a-z0-9_\-./]+$/.test(typeId)) {
-    return false;
-  }
-  const base = typeId.split("/", 1)[0];
-  for (const blocked of [...VEHICLE_ID_BLOCKLIST_PARTS, ...STS_COMPONENT_TYPE_BLOCKLIST_PARTS]) {
-    if (base.includes(blocked)) {
-      return false;
-    }
-  }
-  if (VEHICLE_KNOWN_TRUCK_IDS.has(base)) {
-    return true;
-  }
-  const parts = base.split(/[_-]+/).filter(Boolean);
-  return parts.length > 0 && VEHICLE_BRAND_HINTS.has(parts[0]);
-}
-
-function isVehicleOrTrailerType(typeIdRaw, objectIdRaw = "") {
-  const typeId = String(typeIdRaw || "").trim().toLowerCase();
-  if (!typeId) {
-    return false;
-  }
-  const base = typeId.split("/", 1)[0];
-  if (!/^[a-z0-9_\-./]+$/.test(typeId) || base.length < 3) {
-    return false;
-  }
-  if (base === "skin" || base.startsWith("skin_")) {
-    return false;
-  }
-  if (/^(?:[a-z]{2,4}_)?(?:truck|scout)_old_engine_[a-z0-9_]+$/.test(base)) {
-    return true;
-  }
-  for (const blocked of STS_COMPONENT_TYPE_BLOCKLIST_PARTS) {
-    if (base.includes(blocked)) {
-      return false;
-    }
-  }
-  if (typeId.includes("trailer")) {
-    return true;
-  }
-  for (const blocked of VEHICLE_ID_BLOCKLIST_PARTS) {
-    if (base.includes(blocked)) {
-      return false;
-    }
-  }
-  const objectId = String(objectIdRaw || "").trim();
-  const objectLower = objectId.toLowerCase();
-  if (objectLower.startsWith("bone") || objectLower.endsWith("_cdt")) {
-    return false;
-  }
-  if (base.startsWith("g_") && base.endsWith("_default")) {
-    return false;
-  }
-  if (VEHICLE_KNOWN_TRUCK_IDS.has(base)) {
-    return true;
-  }
-  const parts = base.split(/[_-]+/).filter(Boolean);
-  if (parts.length > 0 && VEHICLE_BRAND_HINTS.has(parts[0])) {
-    return true;
-  }
-  if (GUID_TEXT_RE.test(objectId)) {
-    return true;
-  }
-  const upperObject = objectId.toUpperCase();
-  return upperObject.includes("TRUCK") || upperObject.includes("SCOUT") || upperObject.includes("TRAILER");
-}
-
-function isDenormFloat(value) {
-  const v = Math.abs(Number(value));
-  return Number.isFinite(v) && v > 0 && v < 1e-20;
-}
-
-function stsHasValidTransformAt(bytes, coordOff) {
-  const data = bytes instanceof Uint8Array ? bytes : new Uint8Array(bytes || []);
-  if (!Number.isInteger(coordOff) || coordOff < 32 || coordOff + 12 > data.length) {
-    return false;
-  }
-  const view = new DataView(data.buffer, data.byteOffset, data.byteLength);
-  const vals = [];
-  for (let i = 0; i < 8; i += 1) {
-    vals.push(view.getFloat32(coordOff - 32 + (i * 4), true));
-  }
-  if (!vals.every((v) => Number.isFinite(v))) {
-    return false;
-  }
-  const n1 = Math.sqrt((vals[0] ** 2) + (vals[1] ** 2) + (vals[2] ** 2) + (vals[3] ** 2));
-  const n2 = Math.sqrt((vals[4] ** 2) + (vals[5] ** 2) + (vals[6] ** 2) + (vals[7] ** 2));
-  return n1 >= 0.75 && n1 <= 1.25 && n2 >= 0.75 && n2 <= 1.25;
-}
-
-function readAsciiText(data, beg, endInclusiveNull) {
-  const end = Math.max(beg, endInclusiveNull - 1);
-  if (beg < 0 || end > data.length || end <= beg) {
-    return "";
-  }
-  const raw = data.subarray(beg, end);
-  for (let i = 0; i < raw.length; i += 1) {
-    const b = raw[i];
-    if (b < 32 || b > 126) {
-      return "";
-    }
-  }
-  return new TextDecoder("ascii").decode(raw).trim();
-}
-
-function parseStsGuidVehicleBlocks(data, sourceFile, existingObjects) {
-  const payload = data instanceof Uint8Array ? data : new Uint8Array(data || []);
-  const size = payload.length;
-  if (size < 96) {
-    return [];
-  }
-  const view = new DataView(payload.buffer, payload.byteOffset, payload.byteLength);
-  const mapInfo = mapDisplayInfo(mapIdFromStsFilename(sourceFile));
-  const hits = [];
-
-  for (let i = 0; i < size - 24; i += 1) {
-    const typeLen = view.getUint16(i, true);
-    if (typeLen < 3 || typeLen > 128) {
-      continue;
-    }
-    const typeBeg = i + 2;
-    const typeEnd = typeBeg + typeLen;
-    if (typeEnd + 5 >= size || payload[typeEnd - 1] !== 0) {
-      continue;
-    }
-    const typeId = readAsciiText(payload, typeBeg, typeEnd);
-    if (!typeId) {
-      continue;
-    }
-    const objLen = view.getUint16(typeEnd, true);
-    if (objLen !== 1) {
-      continue;
-    }
-    const objBeg = typeEnd + 2;
-    const objEnd = objBeg + objLen;
-    if (objEnd + 2 >= size || payload[objEnd - 1] !== 0) {
-      continue;
-    }
-    const guidLen = view.getUint16(objEnd, true);
-    if (guidLen < 3 || guidLen > 80) {
-      continue;
-    }
-    const guidBeg = objEnd + 2;
-    const guidEnd = guidBeg + guidLen;
-    if (guidEnd > size || payload[guidEnd - 1] !== 0) {
-      continue;
-    }
-    const guid = readAsciiText(payload, guidBeg, guidEnd);
-    if (!GUID_TEXT_RE.test(guid) || guid.toUpperCase() === "{00000000-0000-0000-0000-000000000000}") {
-      continue;
-    }
-    if (!isVehicleOrTrailerType(typeId, guid)) {
-      continue;
-    }
-    hits.push({
-      startOff: i,
-      typeId,
-      guid,
-      typeBeg,
-      typeEnd,
-      objBeg,
-      objEnd,
-      guidBeg,
-      guidEnd,
-      afterGuidOff: guidEnd,
-    });
-  }
-
-  if (hits.length === 0) {
-    return [];
-  }
-
-  hits.sort((a, b) => a.startOff - b.startOff);
-  const out = [];
-  const existing = Array.isArray(existingObjects) ? [...existingObjects] : [];
-
-  for (let idx = 0; idx < hits.length; idx += 1) {
-    const hit = hits[idx];
-    const blockStart = hit.afterGuidOff;
-    const blockEnd = idx + 1 < hits.length ? hits[idx + 1].startOff : Math.min(size, blockStart + 24000);
-    if (blockEnd <= blockStart + 64) {
-      continue;
-    }
-
-    const candidates = [];
-    for (let coordOff = blockStart + 32; coordOff < Math.min(blockEnd, size - 12); coordOff += 1) {
-      const x = view.getFloat32(coordOff, true);
-      const y = view.getFloat32(coordOff + 4, true);
-      const z = view.getFloat32(coordOff + 8, true);
-      if (!Number.isFinite(x) || !Number.isFinite(y) || !Number.isFinite(z)) {
-        continue;
-      }
-      if (Math.max(Math.abs(x), Math.abs(y), Math.abs(z)) > 5000) {
-        continue;
-      }
-      if (isDenormFloat(x) || isDenormFloat(y) || isDenormFloat(z)) {
-        continue;
-      }
-      if (Math.max(Math.abs(x), Math.abs(y), Math.abs(z)) < 20) {
-        continue;
-      }
-      if (!stsHasValidTransformAt(payload, coordOff)) {
-        continue;
-      }
-      if (coordOff < 4 || coordOff + 16 > size) {
-        continue;
-      }
-      const prevW = view.getFloat32(coordOff - 4, true);
-      const rowW = view.getFloat32(coordOff + 12, true);
-      if (!Number.isFinite(prevW) || !Number.isFinite(rowW)) {
-        continue;
-      }
-      if (Math.abs(prevW) > 0.25 || Math.abs(rowW - 1) > 0.25) {
-        continue;
-      }
-      candidates.push([coordOff, x, y, z]);
-    }
-    if (candidates.length === 0) {
-      continue;
-    }
-
-    const buckets = new Map();
-    for (const item of candidates) {
-      const key = `${Math.round(item[1] * 10) / 10}|${Math.round(item[2] * 10) / 10}|${Math.round(item[3] * 10) / 10}`;
-      if (!buckets.has(key)) {
-        buckets.set(key, []);
-      }
-      buckets.get(key).push(item);
-    }
-    let bestBucket = [];
-    for (const bucket of buckets.values()) {
-      if (bucket.length > bestBucket.length) {
-        bestBucket = bucket;
-      }
-    }
-    if (bestBucket.length === 0) {
-      continue;
-    }
-    let anchor = bestBucket[0];
-    for (const cand of bestBucket) {
-      if (Math.abs(cand[0] - hit.startOff) < Math.abs(anchor[0] - hit.startOff)) {
-        anchor = cand;
-      }
-    }
-    const coordOffs = [...new Set(bestBucket.map((x) => Number(x[0])))]
-      .sort((a, b) => a - b);
-    const anchorOff = Number(anchor[0]);
-
-    let duplicate = false;
-    for (const ex of existing) {
-      const exOid = String(ex.objectId || "").trim().toLowerCase();
-      if (exOid && exOid === String(hit.guid).toLowerCase()) {
-        duplicate = true;
-        break;
-      }
-    }
-    if (duplicate) {
-      continue;
-    }
-
-    const typeId = String(hit.typeId || "");
-    const isTrailer = typeId.toLowerCase().includes("trailer");
-    const obj = {
-      id: `${String(sourceFile).toLowerCase()}|${hit.startOff}|${anchorOff}|guid`,
-      file: getFileBasename(sourceFile),
-      fileKey: String(sourceFile).toLowerCase(),
-      mapId: mapInfo.mapId,
-      mapName: mapInfo.mapName,
-      regionCode: mapInfo.regionCode,
-      regionName: mapInfo.regionName,
-      kind: isTrailer ? "Trailer" : "Vehicle",
-      typeId,
-      name: vehicleHumanizeTypeId(typeId),
-      objectId: hit.guid,
-      guid: hit.guid,
-      startOff: hit.startOff,
-      typeBeg: hit.typeBeg,
-      typeEnd: hit.typeEnd,
-      objBeg: hit.objBeg,
-      objEnd: hit.objEnd,
-      guidBeg: hit.guidBeg,
-      guidEnd: hit.guidEnd,
-      coordOff: anchorOff,
-      coordOffs,
-      endOff: blockEnd,
-      x: Number(anchor[1]),
-      y: Number(anchor[2]),
-      z: Number(anchor[3]),
-    };
-    out.push(obj);
-    existing.push(obj);
-  }
-  return out;
-}
-
-function parseStsMovableObjects(payload, sourceFile) {
-  const data = payload instanceof Uint8Array ? payload : new Uint8Array(payload || []);
-  const size = data.length;
-  if (size < 96) {
-    return [];
-  }
-  const view = new DataView(data.buffer, data.byteOffset, data.byteLength);
-  const out = [];
-  const seen = new Set();
-  const mapInfo = mapDisplayInfo(mapIdFromStsFilename(sourceFile));
-  const minTail = 60;
-
-  function readValidCoord(off) {
-    if (off < 0 || off + 12 > size) {
-      return null;
-    }
-    const x = view.getFloat32(off, true);
-    const y = view.getFloat32(off + 4, true);
-    const z = view.getFloat32(off + 8, true);
-    if (!Number.isFinite(x) || !Number.isFinite(y) || !Number.isFinite(z)) {
-      return null;
-    }
-    if (Math.max(Math.abs(x), Math.abs(y), Math.abs(z)) > 5000000) {
-      return null;
-    }
-    if (isDenormFloat(x) || isDenormFloat(y) || isDenormFloat(z)) {
-      return null;
-    }
-    if (Math.max(Math.abs(x), Math.abs(y), Math.abs(z)) < 20) {
-      return null;
-    }
-    if (!stsHasValidTransformAt(data, off)) {
-      return null;
-    }
-    if (off < 4 || off + 16 > size) {
-      return null;
-    }
-    const prevW = view.getFloat32(off - 4, true);
-    const rowW = view.getFloat32(off + 12, true);
-    if (!Number.isFinite(prevW) || !Number.isFinite(rowW)) {
-      return null;
-    }
-    if (Math.abs(prevW) > 0.25 || Math.abs(rowW - 1) > 0.25) {
-      return null;
-    }
-    return [x, y, z];
-  }
-
-  function tryParseAt(offset, lenSize) {
-    const need = lenSize + 3 + lenSize + 1 + minTail;
-    if (offset + need > size) {
-      return null;
-    }
-    const typeLen = lenSize === 2 ? view.getUint16(offset, true) : view.getUint32(offset, true);
-    if (typeLen < 3 || typeLen > 128) {
-      return null;
-    }
-    const typeBeg = offset + lenSize;
-    const typeEnd = typeBeg + typeLen;
-    if (typeEnd + lenSize + 1 + minTail > size || data[typeEnd - 1] !== 0) {
-      return null;
-    }
-    const typeId = readAsciiText(data, typeBeg, typeEnd);
-    if (!typeId || typeId.toLowerCase().startsWith("deleted_")) {
-      return null;
-    }
-    const objLen = lenSize === 2 ? view.getUint16(typeEnd, true) : view.getUint32(typeEnd, true);
-    if (objLen < 1 || objLen > 196) {
-      return null;
-    }
-    const objBeg = typeEnd + lenSize;
-    const objEnd = objBeg + objLen;
-    if (objEnd + minTail > size || data[objEnd - 1] !== 0) {
-      return null;
-    }
-    const objectId = readAsciiText(data, objBeg, objEnd);
-    if (objectId && (objectId.toLowerCase().startsWith("bone") || objectId.toLowerCase().endsWith("_cdt"))) {
-      return null;
-    }
-
-    let guidBeg = -1;
-    let guidEnd = -1;
-    let guidValue = "";
-    try {
-      const guidLen = lenSize === 2 ? view.getUint16(objEnd, true) : view.getUint32(objEnd, true);
-      if (guidLen >= 3 && guidLen <= 80) {
-        const gb = objEnd + lenSize;
-        const ge = gb + guidLen;
-        if (ge <= size && data[ge - 1] === 0) {
-          const guidCandidate = readAsciiText(data, gb, ge);
-          if (GUID_TEXT_RE.test(guidCandidate) && guidCandidate.toUpperCase() !== "{00000000-0000-0000-0000-000000000000}") {
-            guidBeg = gb;
-            guidEnd = ge;
-            guidValue = guidCandidate;
-          }
-        }
-      }
-    } catch (_error) {
-      // ignore optional guid parse errors
-    }
-
-    const objectOrGuid = guidValue || objectId;
-    if (!objectOrGuid) {
-      return null;
-    }
-    if (objectId.toLowerCase().startsWith("deleted_entry_") && !guidValue) {
-      return null;
-    }
-    if (!isVehicleOrTrailerType(typeId, objectOrGuid)) {
-      return null;
-    }
-
-    let coordOff = -1;
-    let xyz = null;
-    const base = objEnd + 48;
-    const candidates = [base, base - 4, base + 4, base - 8, base + 8, base - 12, base + 12, base - 16, base + 16];
-    for (const cand of candidates) {
-      const parsed = readValidCoord(cand);
-      if (!parsed) {
-        continue;
-      }
-      coordOff = cand;
-      xyz = parsed;
-      break;
-    }
-    if (coordOff < 0) {
-      const scanBeg = Math.max(32, objEnd + 16);
-      const scanEnd = Math.min(size - 12, objEnd + 8192);
-      for (let cand = scanBeg; cand < scanEnd; cand += 1) {
-        const parsed = readValidCoord(cand);
-        if (!parsed) {
-          continue;
-        }
-        coordOff = cand;
-        xyz = parsed;
-        break;
-      }
-    }
-    if (coordOff < 0 || !xyz) {
-      return null;
-    }
-
-    return {
-      typeId,
-      objectId,
-      startOff: offset,
-      typeBeg,
-      typeEnd,
-      objBeg,
-      objEnd,
-      guid: guidValue,
-      guidBeg,
-      guidEnd,
-      coordOff,
-      x: xyz[0],
-      y: xyz[1],
-      z: xyz[2],
-      nextOff: objEnd,
-      entryMinEnd: coordOff + 12,
-    };
-  }
-
-  let i = 0;
-  while (i + 8 + minTail <= size) {
-    let parsed = tryParseAt(i, 2);
-    if (!parsed) {
-      parsed = tryParseAt(i, 4);
-    }
-    if (!parsed) {
-      i += 1;
-      continue;
-    }
-
-    const key = `${parsed.coordOff}|${parsed.typeId}|${parsed.objectId}`;
-    if (!seen.has(key)) {
-      seen.add(key);
-      const kind = parsed.typeId.toLowerCase().includes("trailer") || String(parsed.objectId || "").toUpperCase().includes("TRAILER")
-        ? "Trailer"
-        : "Vehicle";
-      out.push({
-        id: `${String(sourceFile).toLowerCase()}|${parsed.startOff}|${parsed.coordOff}|movable`,
-        file: getFileBasename(sourceFile),
-        fileKey: String(sourceFile).toLowerCase(),
-        mapId: mapInfo.mapId,
-        mapName: mapInfo.mapName,
-        regionCode: mapInfo.regionCode,
-        regionName: mapInfo.regionName,
-        kind,
-        typeId: parsed.typeId,
-        name: vehicleHumanizeTypeId(parsed.typeId),
-        objectId: parsed.objectId,
-        guid: parsed.guid || "",
-        startOff: parsed.startOff,
-        typeBeg: parsed.typeBeg,
-        typeEnd: parsed.typeEnd,
-        objBeg: parsed.objBeg,
-        objEnd: parsed.objEnd,
-        guidBeg: parsed.guidBeg,
-        guidEnd: parsed.guidEnd,
-        coordOff: parsed.coordOff,
-        coordOffs: [parsed.coordOff],
-        endOff: parsed.entryMinEnd,
-        x: parsed.x,
-        y: parsed.y,
-        z: parsed.z,
-      });
-    }
-    i = Math.max(i + 1, parsed.nextOff || (i + 1));
-  }
-
-  try {
-    const extras = parseStsGuidVehicleBlocks(data, sourceFile, out);
-    if (extras.length) {
-      out.push(...extras);
-    }
-  } catch (_error) {
-    // best effort parse
-  }
-  return out;
-}
-
-function decodeStsEntry(entry) {
-  const raw = entry && entry.bytes instanceof Uint8Array ? entry.bytes : new Uint8Array(0);
-  if (raw.length < 6) {
-    throw new Error(`STS file too small: ${entry && entry.name ? entry.name : "unknown"}`);
-  }
-  const view = new DataView(raw.buffer, raw.byteOffset, raw.byteLength);
-  const packed = raw.subarray(4);
-  const inflator = new window.pako.Inflate();
-  inflator.push(packed, true);
-  if (inflator.err) {
-    throw new Error(`STS inflate failed for ${entry.name}: ${inflator.msg || inflator.err}`);
-  }
-  const payloadRaw = inflator.result instanceof Uint8Array ? inflator.result : new Uint8Array(inflator.result || []);
-  let consumed = packed.length;
-  if (inflator.strm && Number.isFinite(inflator.strm.next_in)) {
-    consumed = Math.max(0, Math.min(packed.length, Number(inflator.strm.next_in)));
-  }
-  const trailer = packed.subarray(consumed);
-  return {
-    payload: new Uint8Array(payloadRaw),
-    trailer: new Uint8Array(trailer),
-  };
-}
-
-function encodeStsBytes(payload, trailer) {
-  const data = payload instanceof Uint8Array ? payload : new Uint8Array(payload || []);
-  const tail = trailer instanceof Uint8Array ? trailer : new Uint8Array(trailer || []);
-  const packed = window.pako.deflate(data);
-  const out = new Uint8Array(4 + packed.length + tail.length);
-  const view = new DataView(out.buffer);
-  view.setUint32(0, data.length, true);
-  out.set(packed, 4);
-  if (tail.length) {
-    out.set(tail, 4 + packed.length);
-  }
-  return out;
-}
-
-function getVehiclesStsEntriesForCurrentSlot() {
-  if (!state.folder.loaded || state.folder.files.size === 0) {
-    return [];
-  }
-  const slot = getCurrentSaveSlotNumber();
-  const out = [];
-  for (const entry of state.folder.files.values()) {
-    if (isStsFilenameForSlot(entry.name, slot)) {
-      out.push(entry);
-    }
-  }
-  out.sort((a, b) => String(a.relPath || a.name || "").localeCompare(String(b.relPath || b.name || ""), undefined, { sensitivity: "base" }));
-  return out;
-}
-
-async function loadVehiclesFromFolder(manual = false) {
-  if (!els.vehiclesList || !els.vehiclesInfo) {
-    return;
-  }
-  if (state.vehicles.loading) {
-    return;
-  }
-  if (!state.folder.loaded || state.folder.files.size === 0) {
-    invalidateVehiclesCache("Upload a save folder to load STS files.");
-    return;
-  }
-  if (!state.main) {
-    invalidateVehiclesCache("Load or select a CompleteSave file first.");
-    return;
-  }
-  const pakoReady = await ensurePakoLoaded();
-  if (!pakoReady || !window.pako) {
-    setStatus("Failed to load vehicles runtime (pako).", "error");
-    return;
-  }
-
-  const slot = getCurrentSaveSlotNumber();
-  const folderSignature = buildVehiclesFolderSignature();
-  if (!manual && state.vehicles.entries.length > 0 && state.vehicles.loadedSlot === slot && state.vehicles.loadedForFolder === folderSignature) {
-    renderVehiclesList();
-    return;
-  }
-
-  const files = getVehiclesStsEntriesForCurrentSlot();
-  if (files.length === 0) {
-    invalidateVehiclesCache(`No STS files found for slot ${slot}.`);
-    return;
-  }
-
-  state.vehicles.loading = true;
-  els.vehiclesInfo.textContent = `Loading STS objects from ${files.length} file(s)...`;
-  setStatus(`Loading vehicles from STS files for slot ${slot}...`, "info");
-  try {
-    const parsedEntries = [];
-    const fileMap = new Map();
-    for (const fileEntry of files) {
-      const decoded = decodeStsEntry(fileEntry);
-      fileMap.set(fileEntry.key, {
-        key: fileEntry.key,
-        entry: fileEntry,
-        payload: decoded.payload,
-        trailer: decoded.trailer,
-      });
-      const parsed = parseStsMovableObjects(decoded.payload, fileEntry.name);
-      for (const obj of parsed) {
-        obj.fileKey = fileEntry.key;
-        parsedEntries.push(obj);
-      }
-    }
-    state.vehicles.entries = parsedEntries;
-    state.vehicles.visibleEntryIds = [];
-    state.vehicles.selected.clear();
-    state.vehicles.files = fileMap;
-    state.vehicles.loadedSlot = slot;
-    state.vehicles.loadedForFolder = folderSignature;
-    els.vehiclesInfo.textContent = `Loaded ${parsedEntries.length} vehicles/trailers from ${files.length} STS file(s) for slot ${slot}.`;
-    setStatus(`Vehicles loaded: ${parsedEntries.length} entries from ${files.length} STS file(s).`, "success");
-    renderVehiclesList();
-  } catch (error) {
-    invalidateVehiclesCache(`Failed to load STS data: ${error.message}`);
-    setStatus(`Failed to load vehicles: ${error.message}`, "error");
-  } finally {
-    state.vehicles.loading = false;
-  }
-}
-
-function readVehiclesFilters() {
-  return {
-    type: String(els.vehiclesType && els.vehiclesType.value ? els.vehiclesType.value : "").trim(),
-    region: String(els.vehiclesRegion && els.vehiclesRegion.value ? els.vehiclesRegion.value : "").trim(),
-    map: String(els.vehiclesMap && els.vehiclesMap.value ? els.vehiclesMap.value : "").trim(),
-    search: String(els.vehiclesSearch && els.vehiclesSearch.value ? els.vehiclesSearch.value : "").trim().toLowerCase(),
-  };
-}
-
-function refreshVehiclesFilterOptions() {
-  if (!els.vehiclesRegion || !els.vehiclesMap) {
-    return;
-  }
-  const entries = state.vehicles.entries || [];
-  const selectedRegion = String(els.vehiclesRegion.value || "");
-  const selectedMap = String(els.vehiclesMap.value || "");
-  const regions = [...new Set(entries.map((entry) => String(entry.regionName || "").trim()).filter(Boolean))].sort((a, b) => a.localeCompare(b));
-  const maps = [...new Set(entries.map((entry) => String(entry.mapName || entry.mapId || "").trim()).filter(Boolean))].sort((a, b) => a.localeCompare(b));
-
-  els.vehiclesRegion.innerHTML = "";
-  const allRegions = document.createElement("option");
-  allRegions.value = "";
-  allRegions.textContent = "All regions";
-  els.vehiclesRegion.append(allRegions);
-  for (const value of regions) {
-    const option = document.createElement("option");
-    option.value = value;
-    option.textContent = value;
-    els.vehiclesRegion.append(option);
-  }
-  if (selectedRegion && regions.includes(selectedRegion)) {
-    els.vehiclesRegion.value = selectedRegion;
-  }
-
-  els.vehiclesMap.innerHTML = "";
-  const allMaps = document.createElement("option");
-  allMaps.value = "";
-  allMaps.textContent = "All maps";
-  els.vehiclesMap.append(allMaps);
-  for (const value of maps) {
-    const option = document.createElement("option");
-    option.value = value;
-    option.textContent = value;
-    els.vehiclesMap.append(option);
-  }
-  if (selectedMap && maps.includes(selectedMap)) {
-    els.vehiclesMap.value = selectedMap;
-  }
-}
-
-function vehicleMatchesFilters(entry, filters) {
-  if (filters.type && String(entry.kind || "") !== filters.type) {
-    return false;
-  }
-  if (filters.region && String(entry.regionName || "") !== filters.region) {
-    return false;
-  }
-  if (filters.map && String(entry.mapName || entry.mapId || "") !== filters.map) {
-    return false;
-  }
-  if (filters.search) {
-    const text = [
-      entry.kind,
-      entry.name,
-      entry.typeId,
-      entry.objectId,
-      entry.regionName,
-      entry.mapName,
-      entry.mapId,
-    ]
-      .map((part) => String(part || "").toLowerCase())
-      .join(" ");
-    if (!text.includes(filters.search)) {
-      return false;
-    }
-  }
-  return true;
-}
-
-function escapeHtml(text) {
-  return String(text || "")
-    .replace(/&/g, "&amp;")
-    .replace(/</g, "&lt;")
-    .replace(/>/g, "&gt;");
-}
-
-function renderVehiclesList() {
-  if (!els.vehiclesList) {
-    return;
-  }
-  if (!state.vehicles.entries || state.vehicles.entries.length === 0) {
-    els.vehiclesList.innerHTML = '<div class="vehicle-empty">No vehicle/trailer STS entries loaded.</div>';
-    state.vehicles.visibleEntryIds = [];
-    return;
-  }
-
-  refreshVehiclesFilterOptions();
-  const filters = readVehiclesFilters();
-  const visible = state.vehicles.entries.filter((entry) => vehicleMatchesFilters(entry, filters));
-  state.vehicles.visibleEntryIds = visible.map((entry) => String(entry.id || ""));
-
-  els.vehiclesList.innerHTML = "";
-  const head = document.createElement("div");
-  head.className = "vehicle-row vehicle-row-head";
-  head.innerHTML = "<span></span><span>Type</span><span>Name</span><span>Region</span><span>Map</span><span>X</span><span>Y</span><span>Z</span>";
-  els.vehiclesList.append(head);
-
-  for (const entry of visible) {
-    const row = document.createElement("div");
-    row.className = "vehicle-row";
-
-    const cb = document.createElement("input");
-    cb.type = "checkbox";
-    const entryId = String(entry.id || "");
-    cb.checked = state.vehicles.selected.has(entryId);
-    cb.addEventListener("change", () => {
-      if (cb.checked) {
-        state.vehicles.selected.add(entryId);
-      } else {
-        state.vehicles.selected.delete(entryId);
-      }
-      if (els.vehiclesInfo) {
-        els.vehiclesInfo.textContent = `Visible: ${visible.length} | Selected: ${state.vehicles.selected.size}`;
-      }
-    });
-    row.append(cb);
-
-    const kind = document.createElement("span");
-    kind.textContent = String(entry.kind || "");
-    row.append(kind);
-
-    const name = document.createElement("span");
-    name.className = "vehicle-name vehicle-col-extra";
-    name.innerHTML = `${escapeHtml(String(entry.name || ""))} <code>${escapeHtml(String(entry.typeId || ""))}</code>`;
-    row.append(name);
-
-    const region = document.createElement("span");
-    region.textContent = String(entry.regionName || entry.regionCode || "");
-    row.append(region);
-
-    const map = document.createElement("span");
-    map.className = "vehicle-col-extra";
-    map.textContent = String(entry.mapName || entry.mapId || "");
-    row.append(map);
-
-    const x = document.createElement("span");
-    x.textContent = Number(entry.x).toFixed(3);
-    row.append(x);
-    const y = document.createElement("span");
-    y.textContent = Number(entry.y).toFixed(3);
-    row.append(y);
-    const z = document.createElement("span");
-    z.textContent = Number(entry.z).toFixed(3);
-    row.append(z);
-
-    els.vehiclesList.append(row);
-  }
-
-  if (els.vehiclesInfo) {
-    els.vehiclesInfo.textContent = `Loaded: ${state.vehicles.entries.length} | Visible: ${visible.length} | Selected: ${state.vehicles.selected.size}`;
-  }
-}
-
-function selectVisibleVehicles() {
-  for (const id of state.vehicles.visibleEntryIds) {
-    if (id) {
-      state.vehicles.selected.add(id);
-    }
-  }
-  renderVehiclesList();
-}
-
-function clearVehicleSelection() {
-  state.vehicles.selected.clear();
-  renderVehiclesList();
-}
-
-function selectedVehicleEntries() {
-  if (!state.vehicles.entries || state.vehicles.entries.length === 0) {
-    return [];
-  }
-  const selected = state.vehicles.selected;
-  return state.vehicles.entries.filter((entry) => selected.has(String(entry.id || "")));
-}
-
-function allTransformOffsetsForVehicle(entry, payload) {
-  const offsets = [];
-  if (entry && Number.isInteger(entry.coordOff)) {
-    offsets.push(entry.coordOff);
-  }
-  if (entry && Array.isArray(entry.coordOffs)) {
-    for (const off of entry.coordOffs) {
-      if (Number.isInteger(off)) {
-        offsets.push(off);
-      }
-    }
-  }
-  const uniq = [...new Set(offsets)];
-  return uniq.filter((off) => off >= 0 && off + 12 <= payload.length);
-}
-
-function readF32(payload, offset) {
-  const view = new DataView(payload.buffer, payload.byteOffset, payload.byteLength);
-  return view.getFloat32(offset, true);
-}
-
-function writeF32(payload, offset, value) {
-  const view = new DataView(payload.buffer, payload.byteOffset, payload.byteLength);
-  view.setFloat32(offset, Number(value), true);
-}
-
-function saveTouchedVehiclesFiles(touchedKeys) {
-  let saved = 0;
-  for (const key of touchedKeys) {
-    const file = state.vehicles.files.get(key);
-    if (!file || !(file.payload instanceof Uint8Array)) {
-      continue;
-    }
-    const entry = state.folder.files.get(String(key).toLowerCase());
-    if (!entry) {
-      continue;
-    }
-    entry.bytes = encodeStsBytes(file.payload, file.trailer);
-    entry.dirty = true;
-    saved += 1;
-  }
-  if (saved > 0) {
-    updateFolderMeta();
-  }
-  return saved;
-}
-
-async function onVehiclesUnstuckSelected() {
-  if (state.vehicles.loading) {
-    setStatus("Wait for vehicles loading to finish.", "error");
-    return;
-  }
-  const selected = selectedVehicleEntries();
-  if (selected.length === 0) {
-    setStatus("No vehicle/trailer selected.", "error");
-    return;
-  }
-  const liftRaw = String((els.vehiclesLiftInput && els.vehiclesLiftInput.value) || "").trim();
-  const liftParsed = parseOptionalStrictFloat(liftRaw);
-  if (liftParsed.error || liftParsed.value == null) {
-    setStatus("Lift value is invalid.", "error");
-    return;
-  }
-  const lift = Number(liftParsed.value);
-  if (Math.abs(lift) < 1e-9) {
-    setStatus("Lift value is 0, nothing to apply.", "info");
-    return;
-  }
-
-  const touched = new Set();
-  let movedParts = 0;
-  for (const entry of selected) {
-    const file = state.vehicles.files.get(entry.fileKey);
-    if (!file || !(file.payload instanceof Uint8Array)) {
-      continue;
-    }
-    const offsets = allTransformOffsetsForVehicle(entry, file.payload);
-    for (const off of offsets) {
-      const x = readF32(file.payload, off);
-      const y = readF32(file.payload, off + 4);
-      const z = readF32(file.payload, off + 8);
-      writeF32(file.payload, off, x);
-      writeF32(file.payload, off + 4, y + lift);
-      writeF32(file.payload, off + 8, z);
-      movedParts += 1;
-    }
-    entry.y = Number(entry.y) + lift;
-    touched.add(entry.fileKey);
-  }
-  const saved = saveTouchedVehiclesFiles(touched);
-  renderVehiclesList();
-  setStatus(`Vehicles unstuck applied to ${selected.length} entries (${movedParts} transforms). Saved ${saved} STS file(s).`, "success");
-}
-
-async function onVehiclesApplyCustomXyz() {
-  if (state.vehicles.loading) {
-    setStatus("Wait for vehicles loading to finish.", "error");
-    return;
-  }
-  const selected = selectedVehicleEntries();
-  if (selected.length === 0) {
-    setStatus("No vehicle/trailer selected.", "error");
-    return;
-  }
-  const xParsed = parseOptionalStrictFloat((els.vehiclesXInput && els.vehiclesXInput.value) || "");
-  const yParsed = parseOptionalStrictFloat((els.vehiclesYInput && els.vehiclesYInput.value) || "");
-  const zParsed = parseOptionalStrictFloat((els.vehiclesZInput && els.vehiclesZInput.value) || "");
-  if (xParsed.error || yParsed.error || zParsed.error) {
-    setStatus("X/Y/Z values are invalid.", "error");
-    return;
-  }
-  const vx = xParsed.value;
-  const vy = yParsed.value;
-  const vz = zParsed.value;
-  if (vx == null && vy == null && vz == null) {
-    setStatus("X/Y/Z fields are empty.", "error");
-    return;
-  }
-
-  const touched = new Set();
-  let movedParts = 0;
-  for (const entry of selected) {
-    const file = state.vehicles.files.get(entry.fileKey);
-    if (!file || !(file.payload instanceof Uint8Array)) {
-      continue;
-    }
-    const targetX = vx == null ? Number(entry.x) : Number(vx);
-    const targetY = vy == null ? Number(entry.y) : Number(vy);
-    const targetZ = vz == null ? Number(entry.z) : Number(vz);
-    const dx = targetX - Number(entry.x);
-    const dy = targetY - Number(entry.y);
-    const dz = targetZ - Number(entry.z);
-    const offsets = allTransformOffsetsForVehicle(entry, file.payload);
-    for (const off of offsets) {
-      const cx = readF32(file.payload, off);
-      const cy = readF32(file.payload, off + 4);
-      const cz = readF32(file.payload, off + 8);
-      writeF32(file.payload, off, cx + dx);
-      writeF32(file.payload, off + 4, cy + dy);
-      writeF32(file.payload, off + 8, cz + dz);
-      movedParts += 1;
-    }
-    entry.x = Number(entry.x) + dx;
-    entry.y = Number(entry.y) + dy;
-    entry.z = Number(entry.z) + dz;
-    touched.add(entry.fileKey);
-  }
-  const saved = saveTouchedVehiclesFiles(touched);
-  renderVehiclesList();
-  setStatus(`Custom XYZ applied to ${selected.length} entries (${movedParts} transforms). Saved ${saved} STS file(s).`, "success");
-}
-
-function writeSpanString(payload, beg, end, seedText, keepGuidShape = false) {
-  if (!Number.isInteger(beg) || !Number.isInteger(end) || beg < 0 || end <= beg || beg >= payload.length) {
-    return false;
-  }
-  const end2 = Math.min(end, payload.length);
-  if (end2 <= beg) {
-    return false;
-  }
-  const spanLen = end2 - beg;
-  if (spanLen <= 0) {
-    return false;
-  }
-  if (spanLen === 1) {
-    payload[beg] = 0;
-    return true;
-  }
-  const textLen = spanLen - 1;
-  const seed = keepGuidShape && textLen === 38
-    ? "{00000000-0000-0000-0000-000000000000}"
-    : String(seedText || "deleted");
-  const bytes = new TextEncoder().encode(seed);
-  const fill = new Uint8Array(textLen);
-  fill.fill("_".charCodeAt(0));
-  fill.set(bytes.subarray(0, Math.min(bytes.length, textLen)));
-  payload.set(fill, beg);
-  payload[beg + textLen] = 0;
-  return true;
-}
-
-function rewriteAllCStringOccurrences(payload, targetText, replacementText) {
-  const target = String(targetText || "");
-  if (!target) {
-    return 0;
-  }
-  let tBytes = null;
-  let rBytes = null;
-  try {
-    tBytes = new TextEncoder().encode(target);
-    rBytes = new TextEncoder().encode(String(replacementText || "deleted"));
-  } catch (_error) {
-    return 0;
-  }
-  if (!tBytes || tBytes.length === 0) {
-    return 0;
-  }
-  const needle = new Uint8Array(tBytes.length + 1);
-  needle.set(tBytes, 0);
-  needle[tBytes.length] = 0;
-  let count = 0;
-  for (let pos = 0; pos <= payload.length - needle.length; pos += 1) {
-    let matches = true;
-    for (let i = 0; i < needle.length; i += 1) {
-      if (payload[pos + i] !== needle[i]) {
-        matches = false;
-        break;
-      }
-    }
-    if (!matches) {
-      continue;
-    }
-    const spanLen = tBytes.length;
-    for (let i = 0; i < spanLen; i += 1) {
-      payload[pos + i] = "_".charCodeAt(0);
-    }
-    const lim = Math.min(spanLen, rBytes.length);
-    for (let i = 0; i < lim; i += 1) {
-      payload[pos + i] = rBytes[i];
-    }
-    count += 1;
-    pos += needle.length - 1;
-  }
-  return count;
-}
-
-function invalidateVehicleEntry(payload, entry) {
-  let changed = false;
-  if (writeSpanString(payload, Number(entry.typeBeg), Number(entry.typeEnd), "deleted_type")) {
-    changed = true;
-  }
-  if (writeSpanString(payload, Number(entry.objBeg), Number(entry.objEnd), "deleted_entry_id")) {
-    changed = true;
-  }
-  if (writeSpanString(payload, Number(entry.guidBeg), Number(entry.guidEnd), "deleted_guid", true)) {
-    changed = true;
-  }
-  const typeId = String(entry.typeId || "").trim();
-  if (typeId && rewriteAllCStringOccurrences(payload, typeId, "deleted_type") > 0) {
-    changed = true;
-  }
-  const objectId = String(entry.objectId || "").trim();
-  if (objectId && rewriteAllCStringOccurrences(payload, objectId, "deleted_entry_id") > 0) {
-    changed = true;
-  }
-  const guid = String(entry.guid || "").trim();
-  if (GUID_TEXT_RE.test(guid) && rewriteAllCStringOccurrences(payload, guid, "{00000000-0000-0000-0000-000000000000}") > 0) {
-    changed = true;
-  }
-  return changed;
-}
-
-async function onVehiclesDeleteSelected() {
-  if (state.vehicles.loading) {
-    setStatus("Wait for vehicles loading to finish.", "error");
-    return;
-  }
-  const selected = selectedVehicleEntries();
-  if (selected.length === 0) {
-    setStatus("No vehicle/trailer selected.", "error");
-    return;
-  }
-  const ok = window.confirm(`Delete ${selected.length} selected vehicle/trailer entries from STS files? This cannot be undone without backup.`);
-  if (!ok) {
-    return;
-  }
-  const touched = new Set();
-  const deletedIds = new Set();
-  let deletedCount = 0;
-  let skippedCount = 0;
-  for (const entry of selected) {
-    const file = state.vehicles.files.get(entry.fileKey);
-    if (!file || !(file.payload instanceof Uint8Array)) {
-      skippedCount += 1;
-      continue;
-    }
-    const okInv = invalidateVehicleEntry(file.payload, entry);
-    if (okInv) {
-      touched.add(entry.fileKey);
-      deletedIds.add(String(entry.id || ""));
-      deletedCount += 1;
-    } else {
-      skippedCount += 1;
-    }
-  }
-  if (touched.size === 0) {
-    setStatus("Failed to delete selected entries.", "error");
-    return;
-  }
-  const saved = saveTouchedVehiclesFiles(touched);
-  state.vehicles.entries = state.vehicles.entries.filter((entry) => !deletedIds.has(String(entry.id || "")));
-  for (const id of deletedIds) {
-    state.vehicles.selected.delete(id);
-  }
-  renderVehiclesList();
-  setStatus(
-    `Deleted ${deletedCount} entries. Saved ${saved} STS file(s).${skippedCount ? ` Skipped ${skippedCount}.` : ""}`,
-    "success",
-  );
 }
 
 function buildSeasonMapSelector(container, prefix) {
@@ -3061,18 +2162,19 @@ function buildRegionSelector(container, prefix) {
   mapsSection.append(mapsGrid);
   wrap.append(mapsSection);
 
-  const checks = new Map();
+  const mapChecks = new Map();
   for (const map of BASE_MAPS) {
     const id = `${prefix}-region-${map.code.toLowerCase()}`;
     const box = makeCheckbox(id, map.name);
-    checks.set(map.code, box.input);
+    mapChecks.set(map.code, box.input);
     mapsGrid.append(box.label);
   }
+  const seasonChecks = new Map();
   for (const season of sortedSeasons()) {
     const code = SEASON_REGION_MAP[season].code;
     const id = `${prefix}-region-${code.toLowerCase()}`;
     const box = makeCheckbox(id, SEASON_REGION_MAP[season].label);
-    checks.set(code, box.input);
+    seasonChecks.set(season, box.input);
     seasonsGrid.append(box.label);
   }
   const otherLabel = document.createElement("label");
@@ -3088,12 +2190,18 @@ function buildRegionSelector(container, prefix) {
   mapsSection.append(note);
 
   checkAll.addEventListener("click", () => {
-    for (const input of checks.values()) {
+    for (const input of mapChecks.values()) {
+      input.checked = true;
+    }
+    for (const input of seasonChecks.values()) {
       input.checked = true;
     }
   });
   clearAll.addEventListener("click", () => {
-    for (const input of checks.values()) {
+    for (const input of mapChecks.values()) {
+      input.checked = false;
+    }
+    for (const input of seasonChecks.values()) {
       input.checked = false;
     }
     otherInput.value = "";
@@ -3102,11 +2210,38 @@ function buildRegionSelector(container, prefix) {
   container.append(root);
 
   return {
-    getSelectedRegions() {
+    getSelectedSeasons() {
       const selected = [];
-      for (const [code, input] of checks.entries()) {
+      for (const [season, input] of seasonChecks.entries()) {
+        if (input.checked) {
+          selected.push(season);
+        }
+      }
+      const other = Number.parseInt(otherInput.value.trim(), 10);
+      if (Number.isInteger(other) && other > 0) {
+        selected.push(other);
+      }
+      return uniqueList(selected);
+    },
+    getSelectedMaps() {
+      const selected = [];
+      for (const [code, input] of mapChecks.entries()) {
         if (input.checked) {
           selected.push(code);
+        }
+      }
+      return uniqueList(selected);
+    },
+    getSelectedRegions() {
+      const selected = [];
+      for (const [code, input] of mapChecks.entries()) {
+        if (input.checked) {
+          selected.push(code);
+        }
+      }
+      for (const [season, input] of seasonChecks.entries()) {
+        if (input.checked && SEASON_REGION_MAP[season]) {
+          selected.push(SEASON_REGION_MAP[season].code);
         }
       }
       const other = Number.parseInt(otherInput.value.trim(), 10);
@@ -3116,6 +2251,163 @@ function buildRegionSelector(container, prefix) {
       return uniqueList(selected.map((v) => String(v).toUpperCase()));
     },
   };
+}
+
+const REGION_FEATURE_DEFINITIONS = [
+  {
+    key: "missions",
+    label: "Missions (Legacy)",
+    mode: "seasonMap",
+    legacy: true,
+    info: "You must accept the task or mission in the game before it can be completed.",
+  },
+  {
+    key: "contests",
+    label: "Contests (Legacy)",
+    mode: "seasonMap",
+    legacy: true,
+    info: "You must accept or discover the contests for them to be marked as completed. This also completes unfinished tasks found on the same map.",
+  },
+  {
+    key: "upgrades",
+    label: "Upgrades",
+    mode: "region",
+    info: "At least one upgrade must already be marked or collected in-game for this to work. If a new season is added, you may need to collect or mark one new upgrade first.",
+  },
+  {
+    key: "watchtowers",
+    label: "Watchtowers",
+    mode: "region",
+    info: "This marks watchtowers as found, but it will not reveal the map. Use Fog Tool for that.",
+  },
+  {
+    key: "discoveries",
+    label: "Discoveries",
+    mode: "region",
+    info: "Sets discovered trucks to their max for selected regions but won't add them to the garage.",
+  },
+  {
+    key: "levels",
+    label: "Levels",
+    mode: "region",
+    info: "Lets you view regions you haven't visited yet.",
+  },
+  {
+    key: "garages",
+    label: "Garages",
+    mode: "region",
+    info: "Garages will be unlocked but may still be hidden under fog of war. Recover can stay semi-broken until you find the garage entrance, and some garage entrances are quest-gated.",
+    extraKey: "upgradeAll",
+    extraLabel: "Upgrade all garages",
+  },
+];
+
+function buildRegionsFeatureEditor() {
+  if (!els.regionsFeatureList) {
+    return;
+  }
+  if (els.regionsShowLegacy) {
+    els.regionsShowLegacy.checked = Boolean(state.ui.showLegacyRegionActions);
+  }
+  els.regionsFeatureList.innerHTML = "";
+  state.regions.featureControls.clear();
+
+  for (const def of REGION_FEATURE_DEFINITIONS) {
+    const row = document.createElement("div");
+    row.className = "regions-feature-row";
+    row.dataset.featureKey = def.key;
+    if (def.legacy) {
+      row.dataset.legacy = "true";
+      row.hidden = !state.ui.showLegacyRegionActions;
+    }
+
+    const mainLabel = document.createElement("label");
+    mainLabel.className = "regions-feature-toggle";
+    const input = document.createElement("input");
+    input.type = "checkbox";
+    input.id = `regions-feature-${def.key}`;
+    const text = document.createElement("span");
+    text.textContent = def.label;
+    mainLabel.append(input, text);
+
+    const infoBtn = document.createElement("button");
+    infoBtn.type = "button";
+    infoBtn.className = "regions-info-btn";
+    infoBtn.textContent = "i";
+    infoBtn.title = def.info;
+    infoBtn.setAttribute("aria-label", `${def.label} info`);
+
+    row.append(mainLabel, infoBtn);
+
+    let extraInput = null;
+    if (def.extraKey) {
+      const extraLabel = document.createElement("label");
+      extraLabel.className = "regions-feature-extra";
+      extraInput = document.createElement("input");
+      extraInput.type = "checkbox";
+      extraInput.id = `regions-feature-${def.key}-${def.extraKey}`;
+      const extraText = document.createElement("span");
+      extraText.textContent = def.extraLabel;
+      extraLabel.append(extraInput, extraText);
+      row.append(extraLabel);
+    }
+
+    state.regions.featureControls.set(def.key, { input, extraInput, row, definition: def });
+    els.regionsFeatureList.append(row);
+  }
+}
+
+function onRegionsLegacyToggleChanged() {
+  state.ui.showLegacyRegionActions = Boolean(els.regionsShowLegacy && els.regionsShowLegacy.checked);
+  for (const control of state.regions.featureControls.values()) {
+    if (!control || !control.definition || !control.row) {
+      continue;
+    }
+    if (!control.definition.legacy) {
+      continue;
+    }
+    control.row.hidden = !state.ui.showLegacyRegionActions;
+    if (!state.ui.showLegacyRegionActions && control.input) {
+      control.input.checked = false;
+    }
+  }
+  if (els.regionsInfo && !state.ui.showLegacyRegionActions) {
+    els.regionsInfo.textContent = "Legacy actions hidden. Enable the toggle above if you need Missions / Contests.";
+  }
+}
+
+function setAllRegionsFeatures(enabled) {
+  for (const control of state.regions.featureControls.values()) {
+    if (control && control.input) {
+      if (control.definition && control.definition.legacy && !state.ui.showLegacyRegionActions) {
+        continue;
+      }
+      control.input.checked = Boolean(enabled);
+    }
+  }
+  if (els.regionsInfo) {
+    els.regionsInfo.textContent = enabled ? "All region features selected." : "No region features selected.";
+  }
+}
+
+function getSelectedRegionsFeatures() {
+  const selected = [];
+  for (const def of REGION_FEATURE_DEFINITIONS) {
+    const control = state.regions.featureControls.get(def.key);
+    if (!control || !control.input) {
+      continue;
+    }
+    if (def.legacy && !state.ui.showLegacyRegionActions) {
+      continue;
+    }
+    if (control.input.checked) {
+      selected.push({
+        definition: def,
+        extra: control.extraInput ? Boolean(control.extraInput.checked) : false,
+      });
+    }
+  }
+  return selected;
 }
 
 function sortedSeasons() {
@@ -4240,38 +3532,215 @@ function buildRulesEditor() {
     label.textContent = def.label;
 
     const select = document.createElement("select");
-    for (const opt of def.options) {
+    const options = def.key === "gameDifficultyMode"
+      ? def.options
+      : [...def.options, { label: RULE_RANDOM_LABEL, value: RULE_RANDOM_VALUE }];
+    for (const opt of options) {
       const option = document.createElement("option");
-      option.value = JSON.stringify(opt.value);
+      option.value = opt.label;
       option.textContent = opt.label;
       select.append(option);
     }
+    select.addEventListener("change", () => onRuleDropdownChanged(def));
     row.append(label, select);
     els.rulesEditor.append(row);
     state.rules.controls.set(def.key, select);
   }
 }
 
+function getRuleDefaultLabel(def) {
+  return def && def.options && def.options[0] ? def.options[0].label : "";
+}
+
+function getRuleOptionByLabel(def, label) {
+  return (def && Array.isArray(def.options) ? def.options : []).find((opt) => opt.label === label) || null;
+}
+
+function getRuleOptionByValue(def, value) {
+  return (def && Array.isArray(def.options) ? def.options : []).find((opt) => Object.is(opt.value, value)) || null;
+}
+
+function setRuleSelectLabel(key, label) {
+  const select = state.rules.controls.get(key);
+  if (!select || !label) {
+    return;
+  }
+  if ([...select.options].some((option) => option.value === label)) {
+    select.value = label;
+  }
+}
+
+function setGameDifficultyRuleLabel(label) {
+  setRuleSelectLabel("gameDifficultyMode", label);
+}
+
+function resetRulesUiToDefaults() {
+  for (const def of RULE_DEFINITIONS) {
+    setRuleSelectLabel(def.key, getRuleDefaultLabel(def));
+  }
+}
+
+function setAllRulesToRandom() {
+  for (const def of RULE_DEFINITIONS) {
+    if (def.key === "gameDifficultyMode") {
+      continue;
+    }
+    setRuleSelectLabel(def.key, RULE_RANDOM_LABEL);
+  }
+  setGameDifficultyRuleLabel("New Game+");
+}
+
+function onRulesRandomToggleChanged() {
+  if (els.rulesRandom && els.rulesRandom.checked) {
+    setAllRulesToRandom();
+  }
+}
+
+function onRuleDropdownChanged(def) {
+  if (!def) {
+    return;
+  }
+  const select = state.rules.controls.get(def.key);
+  const selectedLabel = select && select.value ? select.value : getRuleDefaultLabel(def);
+  if (def.key === "gameDifficultyMode") {
+    if (selectedLabel === "Normal") {
+      if (els.rulesRandom) {
+        els.rulesRandom.checked = false;
+      }
+      resetRulesUiToDefaults();
+      setGameDifficultyRuleLabel("Normal");
+    } else if (selectedLabel === "Hard" && els.rulesRandom) {
+      els.rulesRandom.checked = false;
+    }
+    return;
+  }
+  setGameDifficultyRuleLabel("New Game+");
+}
+
+function loadSettingsDictionary(content, fallback) {
+  const defaults = fallback && typeof fallback === "object" && !Array.isArray(fallback) ? fallback : {};
+  const match = new RegExp(`"${escapeRegExp("settingsDictionaryForNGPScreen")}"\\s*:\\s*\\{`, "i").exec(content || "");
+  if (!match) {
+    return { ...defaults };
+  }
+  try {
+    const block = extractBraceBlock(content, match.index);
+    const parsed = JSON.parse(block.block);
+    if (!parsed || typeof parsed !== "object" || Array.isArray(parsed)) {
+      return { ...defaults };
+    }
+    return { ...defaults, ...parsed };
+  } catch (_error) {
+    return { ...defaults };
+  }
+}
+
+function resolveRandomRuleLabel(def) {
+  const concrete = (def.options || []).map((opt) => opt.label).filter((label) => label && label !== RULE_RANDOM_LABEL);
+  if (concrete.length === 0) {
+    return getRuleDefaultLabel(def);
+  }
+  const index = Math.floor(Math.random() * concrete.length);
+  return concrete[index] || getRuleDefaultLabel(def);
+}
+
+function inferRuleLabelFromContent(def, content, settingsDict) {
+  const defaultLabel = getRuleDefaultLabel(def);
+  const meta = RULE_NGP_DICT_META[def.key];
+  if (meta && settingsDict && Object.prototype.hasOwnProperty.call(settingsDict, meta.ngpKey)) {
+    const stateValue = Number.parseInt(String(settingsDict[meta.ngpKey]), 10);
+    if (Number.isFinite(stateValue)) {
+      for (const [label, mappedState] of Object.entries(meta.labelToState || {})) {
+        if (Number.parseInt(String(mappedState), 10) === stateValue && getRuleOptionByLabel(def, label)) {
+          return label;
+        }
+      }
+    }
+  }
+
+  if (!content) {
+    return defaultLabel;
+  }
+
+  if (def.key === "truckAvailability") {
+    const availability = readSimpleValueKey(content, "truckAvailability");
+    if (availability === 2) {
+      const level = readSimpleValueKey(content, "truckAvailabilityLevel");
+      if (typeof level === "number" && level >= 30 && getRuleOptionByLabel(def, "store unlocks at rank 30")) {
+        return "store unlocks at rank 30";
+      }
+      if (typeof level === "number" && level >= 20 && getRuleOptionByLabel(def, "store unlocks at rank 20")) {
+        return "store unlocks at rank 20";
+      }
+      if (getRuleOptionByLabel(def, "store unlocks at rank 10")) {
+        return "store unlocks at rank 10";
+      }
+    }
+  }
+
+  if (def.key === "internalAddonAvailability") {
+    const addonAvailability = readSimpleValueKey(content, "internalAddonAvailability");
+    if (addonAvailability === 2) {
+      const amount = readSimpleValueKey(content, "internalAddonAmount");
+      if (typeof amount === "number") {
+        if (amount >= 10 && amount <= 50 && getRuleOptionByLabel(def, "10-50 per garage")) {
+          return "10-50 per garage";
+        }
+        if (amount >= 30 && amount <= 100 && getRuleOptionByLabel(def, "30-100 per garage")) {
+          return "30-100 per garage";
+        }
+        if (amount >= 50 && amount <= 150 && getRuleOptionByLabel(def, "50-150 per garage")) {
+          return "50-150 per garage";
+        }
+        if (amount >= 0 && amount <= 100 && getRuleOptionByLabel(def, "0-100 per garage")) {
+          return "0-100 per garage";
+        }
+      }
+    }
+  }
+
+  if (def.key === "maxContestAttempts") {
+    if (readSimpleValueKey(content, "isGoldFailReason") === true && getRuleOptionByLabel(def, "gold time only")) {
+      return "gold time only";
+    }
+  }
+
+  if (def.key === "regionRepaireMoneyFactor") {
+    const moneyFactor = readSimpleValueKey(content, "regionRepaireMoneyFactor");
+    const pointsFactor = readSimpleValueKey(content, "regionRepairePointsFactor");
+    if (moneyFactor !== undefined && pointsFactor !== undefined) {
+      for (const opt of def.options) {
+        if (Object.is(opt.value, moneyFactor) && Object.is(opt.value, pointsFactor)) {
+          return opt.label;
+        }
+      }
+    }
+  }
+
+  if (def.key === "needToAddDlcTrucks") {
+    const dlcRaw = readSimpleValueKey(content, "needToAddDlcTrucks");
+    const fallbackRaw = dlcRaw === undefined ? readSimpleValueKey(content, "isDLCVehiclesAvailable") : dlcRaw;
+    const found = getRuleOptionByValue(def, fallbackRaw);
+    return found ? found.label : defaultLabel;
+  }
+
+  const current = readSimpleValueKey(content, def.key);
+  const found = getRuleOptionByValue(def, current);
+  return found ? found.label : defaultLabel;
+}
+
 function hydrateRulesFromMain() {
   if (!state.rules.controls.size) {
     return;
   }
+  const settingsDict = state.main ? loadSettingsDictionary(state.main.text, DEFAULT_SETTINGS_DICT) : { ...DEFAULT_SETTINGS_DICT };
   for (const def of RULE_DEFINITIONS) {
     const select = state.rules.controls.get(def.key);
     if (!select) {
       continue;
     }
-    let targetValue = def.options[0] ? def.options[0].value : 0;
-    if (state.main) {
-      const current = readSimpleValueKey(state.main.text, def.key);
-      if (current !== undefined) {
-        const found = def.options.find((opt) => Object.is(opt.value, current));
-        if (found) {
-          targetValue = found.value;
-        }
-      }
-    }
-    select.value = JSON.stringify(targetValue);
+    const label = state.main ? inferRuleLabelFromContent(def, state.main.text, settingsDict) : getRuleDefaultLabel(def);
+    select.value = label;
   }
 }
 
@@ -4280,44 +3749,93 @@ function onApplyRules() {
     return;
   }
   try {
-    let content = state.main.text;
+    if (els.rulesRandom && els.rulesRandom.checked) {
+      setAllRulesToRandom();
+    }
+    const resolvedLabels = new Map();
     for (const def of RULE_DEFINITIONS) {
       const select = state.rules.controls.get(def.key);
-      if (!select) {
-        continue;
+      const rawLabel = select && select.value ? select.value : getRuleDefaultLabel(def);
+      const label = rawLabel === RULE_RANDOM_LABEL ? resolveRandomRuleLabel(def) : rawLabel;
+      resolvedLabels.set(def.key, label || getRuleDefaultLabel(def));
+    }
+
+    const difficultyLabel = resolvedLabels.get("gameDifficultyMode") || "Normal";
+    if (difficultyLabel === "Normal") {
+      for (const def of RULE_DEFINITIONS) {
+        if (def.key === "gameDifficultyMode") {
+          continue;
+        }
+        resolvedLabels.set(def.key, getRuleDefaultLabel(def));
       }
-      const fallback = def.options[0] ? def.options[0].value : 0;
-      const value = parseRuleSelectValue(select.value, fallback);
+    }
+
+    for (const def of RULE_DEFINITIONS) {
+      const select = state.rules.controls.get(def.key);
+      if (select) {
+        select.value = resolvedLabels.get(def.key) || getRuleDefaultLabel(def);
+      }
+    }
+
+    let content = state.main.text;
+    for (const def of RULE_DEFINITIONS) {
+      const label = resolvedLabels.get(def.key) || getRuleDefaultLabel(def);
+      const option = getRuleOptionByLabel(def, label) || def.options[0];
+      const value = option ? option.value : 0;
       if (typeof value === "boolean") {
         content = replaceOrInsertBoolean(content, def.key, value);
       } else {
         content = replaceOrInsertNumeric(content, def.key, value);
       }
     }
-    const gameDifficultySelect = state.rules.controls.get("gameDifficultyMode");
-    if (gameDifficultySelect) {
-      const gameDifficulty = Number.parseInt(
-        String(parseRuleSelectValue(gameDifficultySelect.value, 0)),
-        10,
-      );
-      content = replaceOrInsertBoolean(content, "isHardMode", Number.isFinite(gameDifficulty) && gameDifficulty === 1);
+
+    const difficultyOption = getRuleOptionByLabel(
+      RULE_DEFINITIONS.find((def) => def.key === "gameDifficultyMode"),
+      resolvedLabels.get("gameDifficultyMode") || "Normal",
+    );
+    const gameDifficulty = Number.parseInt(String(difficultyOption ? difficultyOption.value : 0), 10);
+    content = replaceOrInsertBoolean(content, "isHardMode", Number.isFinite(gameDifficulty) && gameDifficulty === 1);
+
+    const truckAvailabilityLabel = resolvedLabels.get("truckAvailability");
+    if (truckAvailabilityLabel === "store unlocks at rank 10") {
+      content = replaceOrInsertNumeric(content, "truckAvailabilityLevel", 10);
+    } else if (truckAvailabilityLabel === "store unlocks at rank 20") {
+      content = replaceOrInsertNumeric(content, "truckAvailabilityLevel", 20);
+    } else if (truckAvailabilityLabel === "store unlocks at rank 30") {
+      content = replaceOrInsertNumeric(content, "truckAvailabilityLevel", 30);
     }
-    content = sanitizeRulesContent(content);
+
+    const internalAddonLabel = resolvedLabels.get("internalAddonAvailability");
+    if (Object.prototype.hasOwnProperty.call(INTERNAL_ADDON_AMOUNT_BY_LABEL, internalAddonLabel)) {
+      content = replaceOrInsertNumeric(content, "internalAddonAmount", INTERNAL_ADDON_AMOUNT_BY_LABEL[internalAddonLabel]);
+    }
+
+    const maxContestLabel = resolvedLabels.get("maxContestAttempts");
+    content = replaceOrInsertBoolean(content, "isGoldFailReason", maxContestLabel === "gold time only");
+    if (maxContestLabel === "gold time only") {
+      content = replaceOrInsertNumeric(content, "maxContestAttempts", -1);
+    }
+
+    const regionRepairDef = RULE_DEFINITIONS.find((def) => def.key === "regionRepaireMoneyFactor");
+    const regionRepairOption = getRuleOptionByLabel(regionRepairDef, resolvedLabels.get("regionRepaireMoneyFactor"));
+    if (regionRepairOption) {
+      content = replaceOrInsertNumeric(content, "regionRepairePointsFactor", regionRepairOption.value);
+    }
+
+    const dlcDef = RULE_DEFINITIONS.find((def) => def.key === "needToAddDlcTrucks");
+    const dlcOption = getRuleOptionByLabel(dlcDef, resolvedLabels.get("needToAddDlcTrucks"));
+    if (dlcOption) {
+      content = replaceOrInsertBoolean(content, "isDLCVehiclesAvailable", Boolean(dlcOption.value));
+    }
+
+    content = sanitizeRulesContent(content, resolvedLabels, difficultyLabel);
     commitMain(content, "Rules updated.");
   } catch (error) {
     setStatus(`Failed to apply rules: ${error.message}`, "error");
   }
 }
 
-function parseRuleSelectValue(rawValue, fallback) {
-  try {
-    return JSON.parse(rawValue);
-  } catch (_error) {
-    return fallback;
-  }
-}
-
-function sanitizeRulesContent(content) {
+function sanitizeRulesContent(content, resolvedLabels, difficultyLabel) {
   let out = content;
   for (const def of RULE_DEFINITIONS) {
     const safeDefault = def.options[0] ? def.options[0].value : 0;
@@ -4327,6 +3845,22 @@ function sanitizeRulesContent(content) {
   out = ensureArrayKeyWithDefault(out, "recoveryPrice", DEFAULT_RECOVERY_PRICE);
   out = ensureArrayKeyWithDefault(out, "fullRepairPrice", DEFAULT_FULL_REPAIR_PRICE);
   out = ensureSettingsDictionaryForNgp(out, DEFAULT_SETTINGS_DICT);
+  let settingsDict = difficultyLabel === "Normal"
+    ? { ...DEFAULT_SETTINGS_DICT }
+    : loadSettingsDictionary(out, DEFAULT_SETTINGS_DICT);
+  for (const def of RULE_DEFINITIONS) {
+    const meta = RULE_NGP_DICT_META[def.key];
+    if (!meta) {
+      continue;
+    }
+    const label = resolvedLabels instanceof Map
+      ? (resolvedLabels.get(def.key) || getRuleDefaultLabel(def))
+      : getRuleDefaultLabel(def);
+    if (Object.prototype.hasOwnProperty.call(meta.labelToState, label)) {
+      settingsDict[meta.ngpKey] = meta.labelToState[label];
+    }
+  }
+  out = replaceOrInsertJsonLiteral(out, "settingsDictionaryForNGPScreen", JSON.stringify(settingsDict));
   out = ensureDeployPriceObject(out, DEFAULT_DEPLOY_PRICE);
   return out;
 }
@@ -4741,7 +4275,6 @@ function refreshObjectivesFromMain() {
     state.objectives.data = null;
     state.objectives.visibleKeys = [];
     state.objectives.selected.clear();
-    state.objectives.reaccept.clear();
     state.objectives.finishedInSave.clear();
     renderObjectivesList();
     return;
@@ -4752,7 +4285,6 @@ function refreshObjectivesFromMain() {
       state.objectives.data = null;
       state.objectives.visibleKeys = [];
       state.objectives.selected.clear();
-      state.objectives.reaccept.clear();
       state.objectives.finishedInSave.clear();
       els.objectivesInfo.textContent = "objectiveStates block not found.";
       els.objectivesList.innerHTML = "";
@@ -4766,13 +4298,11 @@ function refreshObjectivesFromMain() {
     state.objectives.data = parsed;
     state.objectives.finishedInSave = collectFinishedObjectivesFromMain(state.main.text, parsed);
     state.objectives.selected.clear();
-    state.objectives.reaccept.clear();
     renderObjectivesList();
   } catch (error) {
     state.objectives.data = null;
     state.objectives.visibleKeys = [];
     state.objectives.selected.clear();
-    state.objectives.reaccept.clear();
     state.objectives.finishedInSave.clear();
     els.objectivesInfo.textContent = `Failed to parse objectiveStates: ${error.message}`;
     els.objectivesList.innerHTML = "";
@@ -5155,9 +4685,6 @@ function renderObjectivesList() {
 
     const meta = state.objectives.catalogMeta[key];
     const displayName = getObjectiveDisplayName(key, entry, meta) || humanizeObjectiveKey(key) || key;
-    const objectiveType = getObjectiveTypeForFilter(key, meta);
-    const isTaskObjective = objectiveType === "TASK";
-    const canReaccept = isFinished && isTaskObjective;
     const row = document.createElement("div");
     row.className = "objective-row";
 
@@ -5176,44 +4703,24 @@ function renderObjectivesList() {
     }
 
     const status = document.createElement("span");
-    status.className = canReaccept ? "pill warn" : "pill";
-    if (canReaccept && state.objectives.reaccept.has(key)) {
-      status.textContent = "re-accept queued";
-    } else {
-      status.textContent = isFinished ? "finished" : "pending";
-    }
+    status.className = "pill";
+    status.textContent = isFinished ? "finished" : "pending";
 
     const check = document.createElement("input");
     check.type = "checkbox";
     if (isFinished) {
       state.objectives.selected.delete(key);
     }
-    if (canReaccept) {
-      check.checked = !state.objectives.reaccept.has(key);
-      check.disabled = false;
-    } else {
-      check.checked = isFinished || state.objectives.selected.has(key);
-      check.disabled = isFinished;
-      if (isFinished) {
-        state.objectives.reaccept.delete(key);
-      }
-    }
+    check.checked = isFinished || state.objectives.selected.has(key);
+    check.disabled = isFinished;
     check.addEventListener("change", () => {
-      if (canReaccept) {
-        if (check.checked) {
-          state.objectives.reaccept.delete(key);
-        } else {
-          state.objectives.reaccept.add(key);
-        }
+      if (isFinished) {
+        return;
+      }
+      if (check.checked) {
+        state.objectives.selected.add(key);
       } else {
-        if (isFinished) {
-          return;
-        }
-        if (check.checked) {
-          state.objectives.selected.add(key);
-        } else {
-          state.objectives.selected.delete(key);
-        }
+        state.objectives.selected.delete(key);
       }
       updateObjectivesInfo({
         mode: "main",
@@ -5221,11 +4728,7 @@ function renderObjectivesList() {
         filtered: visible.length,
         shown: visible.length,
         finishedShown: finishedCount,
-        reacceptQueued: state.objectives.reaccept.size,
       });
-      if (canReaccept) {
-        renderObjectivesList();
-      }
     });
 
     row.append(infoWrap, status, check);
@@ -5238,20 +4741,18 @@ function renderObjectivesList() {
     filtered: visible.length,
     shown: visible.length,
     finishedShown: finishedCount,
-    reacceptQueued: state.objectives.reaccept.size,
   });
 }
 
 function updateObjectivesInfo(summary) {
   const source = state.objectives.catalogSource ? ` | Source: ${state.objectives.catalogSource}` : "";
-  const reaccept = state.objectives.reaccept.size;
   if (summary.mode === "catalog") {
     els.objectivesInfo.textContent =
       `Catalog entries: ${summary.total} | Filtered: ${summary.filtered} | Showing: ${summary.shown} | Selected: ${state.objectives.selected.size} | Upload Main Save to apply changes.${source}`;
     return;
   }
   els.objectivesInfo.textContent =
-    `Total: ${summary.total} | Filtered: ${summary.filtered} | Showing: ${summary.shown} | Finished shown: ${summary.finishedShown || 0} | Selected: ${state.objectives.selected.size} | Re-accept queued: ${summary.reacceptQueued != null ? summary.reacceptQueued : reaccept}${source}`;
+    `Total: ${summary.total} | Filtered: ${summary.filtered} | Showing: ${summary.shown} | Finished shown: ${summary.finishedShown || 0} | Selected: ${state.objectives.selected.size}${source}`;
 }
 
 function setObjectivesNeedMainMessage() {
@@ -5279,7 +4780,6 @@ function selectVisibleObjectives() {
 
 function clearObjectiveSelection() {
   state.objectives.selected.clear();
-  state.objectives.reaccept.clear();
   renderObjectivesList();
 }
 
@@ -5609,385 +5109,40 @@ function isLikelyObjectiveKey(token) {
   );
 }
 
-function dedupeObjectiveIds(ids) {
-  const out = [];
-  const seen = new Set();
-  for (const raw of ids || []) {
-    const key = String(raw || "").trim();
-    if (!key || seen.has(key)) {
-      continue;
-    }
-    seen.add(key);
-    out.push(key);
-  }
-  return out;
-}
-
-function isTaskObjectiveId(key) {
-  const id = String(key || "").trim();
-  if (!id) {
-    return false;
-  }
-  const meta = state.objectives.catalogMeta[id];
-  const kind = getObjectiveTypeForFilter(id, meta);
-  if (kind === "TASK") {
-    return true;
-  }
-  if (kind === "CONTRACT" || kind === "CONTEST") {
-    return false;
-  }
-  const upper = id.toUpperCase();
-  return upper.endsWith("_TSK") || upper.endsWith("_TASK");
-}
-
-function isObjectiveCurrentlyFinished(key) {
-  const id = String(key || "").trim();
-  if (!id) {
-    return false;
-  }
-  if (state.objectives.finishedInSave.has(id.toUpperCase())) {
-    return true;
-  }
-  if (state.objectives.data && isObjectiveFinishedEntry(state.objectives.data[id])) {
-    return true;
-  }
-  return false;
-}
-
-function parseObjectiveIdCollection(raw) {
-  if (raw && typeof raw === "object" && !Array.isArray(raw)) {
-    return { shape: "dict", items: dedupeObjectiveIds(Object.keys(raw)) };
-  }
-  if (Array.isArray(raw)) {
-    const onlyStrings = raw.filter((item) => typeof item === "string");
-    return { shape: "list", items: dedupeObjectiveIds(onlyStrings) };
-  }
-  return { shape: "list", items: [] };
-}
-
-function packObjectiveIdCollection(shape, items) {
-  if (shape === "dict") {
-    return Object.fromEntries((items || []).map((item) => [item, true]));
-  }
-  return [...(items || [])];
-}
-
-function addObjectiveIdsToCollection(raw, ids) {
-  const parsed = parseObjectiveIdCollection(raw);
-  const addIds = dedupeObjectiveIds(ids);
-  if (addIds.length === 0) {
-    return { value: packObjectiveIdCollection(parsed.shape, parsed.items), changed: 0 };
-  }
-  const out = [...parsed.items];
-  const seen = new Set(out);
-  let added = 0;
-  for (const id of addIds) {
-    if (seen.has(id)) {
-      continue;
-    }
-    out.push(id);
-    seen.add(id);
-    added += 1;
-  }
-  return { value: packObjectiveIdCollection(parsed.shape, out), changed: added };
-}
-
-function removeObjectiveIdsFromCollection(raw, ids) {
-  const parsed = parseObjectiveIdCollection(raw);
-  const removeSet = new Set(dedupeObjectiveIds(ids));
-  if (removeSet.size === 0) {
-    return { value: packObjectiveIdCollection(parsed.shape, parsed.items), changed: 0 };
-  }
-  const out = parsed.items.filter((id) => !removeSet.has(id));
-  return {
-    value: packObjectiveIdCollection(parsed.shape, out),
-    changed: Math.max(0, parsed.items.length - out.length),
-  };
-}
-
-function ensureObjectiveStateEntry(rawState, objectiveId, mode) {
-  const id = String(objectiveId || "").trim();
-  const entry = rawState && typeof rawState === "object" && !Array.isArray(rawState) ? rawState : {};
-  entry.id = id;
-  if (!entry.failReasons || typeof entry.failReasons !== "object" || Array.isArray(entry.failReasons)) {
-    entry.failReasons = {};
-  }
-  if (entry.spentTime == null) {
-    entry.spentTime = 0;
-  }
-  entry.isTimerStarted = true;
-  if (mode === "complete") {
-    entry.isFinished = true;
-    entry.wasCompletedAtLeastOnce = true;
-  } else {
-    entry.isFinished = false;
-    entry.wasCompletedAtLeastOnce = false;
-  }
-  return entry;
-}
-
-function mutateRootObjectiveStates(content, completionIds, unfinishedIds) {
-  const m = /"objectiveStates"\s*:\s*\{/i.exec(content);
-  if (!m) {
-    throw new Error('"objectiveStates" block not found.');
-  }
-  const block = extractBraceBlock(content, m.index);
-  const states = JSON.parse(block.block);
-  if (!states || typeof states !== "object" || Array.isArray(states)) {
-    throw new Error("objectiveStates is not an object.");
-  }
-
-  let completedTouched = 0;
-  for (const id of dedupeObjectiveIds(completionIds)) {
-    const before = states[id];
-    const next = ensureObjectiveStateEntry(before, id, "complete");
-    if (!before || before.isFinished !== true || before.wasCompletedAtLeastOnce !== true) {
-      completedTouched += 1;
-    }
-    states[id] = next;
-  }
-
-  let unfinishedTouched = 0;
-  for (const id of dedupeObjectiveIds(unfinishedIds)) {
-    const before = states[id];
-    const wasFinished = Boolean(
-      before &&
-      typeof before === "object" &&
-      (before.isFinished === true || before.wasCompletedAtLeastOnce === true),
-    );
-    states[id] = ensureObjectiveStateEntry(before, id, "unfinished");
-    if (!before || wasFinished) {
-      unfinishedTouched += 1;
-    }
-  }
-
-  const newBlock = JSON.stringify(states);
-  return {
-    content: content.slice(0, block.start) + newBlock + content.slice(block.end),
-    completedTouched,
-    unfinishedTouched,
-  };
-}
-
-function mutateCompleteSaveObjectiveData(content, payload) {
-  const acceptTaskIds = dedupeObjectiveIds(payload && payload.acceptTaskIds);
-  const reacceptTaskIds = dedupeObjectiveIds(payload && payload.reacceptTaskIds);
-  const contestCompleteIds = dedupeObjectiveIds(payload && payload.contestCompleteIds);
-  const activeTaskIds = dedupeObjectiveIds([...acceptTaskIds, ...reacceptTaskIds]);
-
-  const contestTimesNewEntries = {};
-  const matches = [];
-  const re = /"(CompleteSave\d*)"\s*:\s*\{/g;
-  let m = null;
-  while ((m = re.exec(content)) !== null) {
-    matches.push({ key: m[1], index: m.index });
-  }
-
-  let changedBlocks = 0;
-  let discoveredAdded = 0;
-  let finishedRemoved = 0;
-  let contestFinishedAdded = 0;
-  let viewedRemoved = 0;
-  let statesTouched = 0;
-
-  for (let i = matches.length - 1; i >= 0; i -= 1) {
-    const hit = matches[i];
-    let block = null;
-    try {
-      block = extractBraceBlock(content, hit.index);
-    } catch (_error) {
-      continue;
-    }
-    let valueData = null;
-    try {
-      valueData = JSON.parse(block.block);
-    } catch (_error) {
-      continue;
-    }
-
-    let ssl = valueData.SslValue;
-    if (!ssl || typeof ssl !== "object" || Array.isArray(ssl)) {
-      const nested = valueData[hit.key];
-      ssl = nested && typeof nested === "object" ? nested.SslValue : null;
-    }
-    if (!ssl || typeof ssl !== "object" || Array.isArray(ssl)) {
-      ssl = {};
-    }
-
-    let changed = false;
-
-    if (activeTaskIds.length > 0) {
-      const discovered = addObjectiveIdsToCollection(ssl.discoveredObjectives, activeTaskIds);
-      ssl.discoveredObjectives = discovered.value;
-      if (discovered.changed > 0) {
-        discoveredAdded += discovered.changed;
-        changed = true;
-      }
-    }
-
-    if (reacceptTaskIds.length > 0) {
-      const finishedRemovedOut = removeObjectiveIdsFromCollection(ssl.finishedObjs, reacceptTaskIds);
-      ssl.finishedObjs = finishedRemovedOut.value;
-      if (finishedRemovedOut.changed > 0) {
-        finishedRemoved += finishedRemovedOut.changed;
-        changed = true;
-      }
-    }
-
-    if (contestCompleteIds.length > 0) {
-      const finishedAddedOut = addObjectiveIdsToCollection(ssl.finishedObjs, contestCompleteIds);
-      ssl.finishedObjs = finishedAddedOut.value;
-      if (finishedAddedOut.changed > 0) {
-        contestFinishedAdded += finishedAddedOut.changed;
-        changed = true;
-      }
-      let contestTimes = ssl.contestTimes;
-      if (!contestTimes || typeof contestTimes !== "object" || Array.isArray(contestTimes)) {
-        contestTimes = {};
-      }
-      let contestTimesChanged = false;
-      for (const id of contestCompleteIds) {
-        if (!(id in contestTimes)) {
-          contestTimes[id] = 1;
-          contestTimesNewEntries[id] = 1;
-          contestTimesChanged = true;
-        }
-      }
-      if (contestTimesChanged) {
-        ssl.contestTimes = contestTimes;
-        changed = true;
-      }
-    }
-
-    const viewedIds = dedupeObjectiveIds([...activeTaskIds, ...contestCompleteIds]);
-    if (viewedIds.length > 0) {
-      const viewedOut = removeObjectiveIdsFromCollection(ssl.viewedUnactivatedObjectives, viewedIds);
-      ssl.viewedUnactivatedObjectives = viewedOut.value;
-      if (viewedOut.changed > 0) {
-        viewedRemoved += viewedOut.changed;
-        changed = true;
-      }
-    }
-
-    if (activeTaskIds.length > 0 || contestCompleteIds.length > 0) {
-      let states = ssl.objectiveStates;
-      if (!states || typeof states !== "object" || Array.isArray(states)) {
-        states = {};
-      }
-      let localTouched = 0;
-      for (const id of activeTaskIds) {
-        const before = states[id];
-        const wasFinished = Boolean(before && typeof before === "object" && before.isFinished === true);
-        states[id] = ensureObjectiveStateEntry(before, id, "unfinished");
-        if (!before || wasFinished) {
-          localTouched += 1;
-        }
-      }
-      for (const id of contestCompleteIds) {
-        const before = states[id];
-        const alreadyComplete = Boolean(before && typeof before === "object" && before.isFinished === true);
-        states[id] = ensureObjectiveStateEntry(before, id, "complete");
-        if (!alreadyComplete) {
-          localTouched += 1;
-        }
-      }
-      if (localTouched > 0) {
-        statesTouched += localTouched;
-        changed = true;
-      }
-      ssl.objectiveStates = states;
-    }
-
-    if (!changed) {
-      continue;
-    }
-
-    valueData.SslValue = ssl;
-    const nextBlock = JSON.stringify(valueData);
-    content = content.slice(0, block.start) + nextBlock + content.slice(block.end);
-    changedBlocks += 1;
-  }
-
-  if (Object.keys(contestTimesNewEntries).length > 0) {
-    content = updateAllContestTimesBlocks(content, contestTimesNewEntries);
-  }
-
-  return {
-    content,
-    changedBlocks,
-    discoveredAdded,
-    finishedRemoved,
-    contestFinishedAdded,
-    viewedRemoved,
-    statesTouched,
-  };
-}
-
-function acceptSelectedObjectivesTasks() {
-  if (!requireMain()) {
-    return;
-  }
-  const taskIds = dedupeObjectiveIds(
-    [...state.objectives.selected].filter((id) => isTaskObjectiveId(id) && !isObjectiveCurrentlyFinished(id)),
-  );
-  if (taskIds.length === 0) {
-    setStatus("No selected unfinished TASK entries to accept.", "error");
-    return;
-  }
-  try {
-    const rootOut = mutateRootObjectiveStates(state.main.text, [], taskIds);
-    const saveOut = mutateCompleteSaveObjectiveData(rootOut.content, {
-      acceptTaskIds: taskIds,
-      reacceptTaskIds: [],
-      contestCompleteIds: [],
-    });
-    for (const id of taskIds) {
-      state.objectives.selected.delete(id);
-    }
-    commitMain(
-      saveOut.content,
-      `Objectives+ Accept Tasks finished. Requested: ${taskIds.length}, states touched: ${rootOut.unfinishedTouched + saveOut.statesTouched}.`,
-    );
-  } catch (error) {
-    setStatus(`Failed to accept tasks: ${error.message}`, "error");
-  }
-}
-
 function completeSelectedObjectives() {
   if (!requireMain()) {
     return;
   }
-  const completionIds = dedupeObjectiveIds(
-    [...state.objectives.selected].filter((id) => !isObjectiveCurrentlyFinished(id)),
-  );
-  const reacceptTaskIds = dedupeObjectiveIds(
-    [...state.objectives.reaccept].filter((id) => isTaskObjectiveId(id)),
-  );
-  const contestCompleteIds = completionIds.filter((id) => {
-    const meta = state.objectives.catalogMeta[id];
-    return getObjectiveTypeForFilter(id, meta) === "CONTEST";
-  });
-
-  if (completionIds.length === 0 && reacceptTaskIds.length === 0) {
-    setStatus("No objective changes selected.", "error");
+  if (state.objectives.selected.size === 0) {
+    setStatus("No objectives selected.", "error");
     return;
   }
-
   try {
-    const rootOut = mutateRootObjectiveStates(state.main.text, completionIds, reacceptTaskIds);
-    const saveOut = mutateCompleteSaveObjectiveData(rootOut.content, {
-      acceptTaskIds: [],
-      reacceptTaskIds,
-      contestCompleteIds,
-    });
+    const m = /"objectiveStates"\s*:\s*\{/i.exec(state.main.text);
+    if (!m) {
+      throw new Error('"objectiveStates" block not found.');
+    }
+    const block = extractBraceBlock(state.main.text, m.index);
+    const obj = JSON.parse(block.block);
+    let updated = 0;
+    for (const key of state.objectives.selected) {
+      let entry = obj[key];
+      if (!entry || typeof entry !== "object") {
+        entry = {};
+        obj[key] = entry;
+      }
+      if (entry.isFinished !== true || entry.wasCompletedAtLeastOnce !== true) {
+        entry.isFinished = true;
+        entry.wasCompletedAtLeastOnce = true;
+        updated += 1;
+      }
+    }
+    const newBlock = JSON.stringify(obj);
+    const content = state.main.text.slice(0, block.start) + newBlock + state.main.text.slice(block.end);
     state.objectives.selected.clear();
-    state.objectives.reaccept.clear();
-    commitMain(
-      saveOut.content,
-      `Objectives+ applied. Completed: ${completionIds.length}, task re-accepts: ${reacceptTaskIds.length}, contest finished entries added: ${saveOut.contestFinishedAdded}.`,
-    );
+    commitMain(content, `Objectives+ updated (${updated} completed).`);
   } catch (error) {
-    setStatus(`Failed to apply objectives changes: ${error.message}`, "error");
+    setStatus(`Failed to complete objectives: ${error.message}`, "error");
   }
 }
 
@@ -6146,6 +5301,71 @@ function onApplyContests() {
     commitMain(out.content, out.message);
   } catch (error) {
     setStatus(`Failed to complete contests: ${error.message}`, "error");
+  }
+}
+
+function onApplyRegions() {
+  if (!requireMain()) {
+    return;
+  }
+  const selector = state.selectors.regions;
+  if (!selector) {
+    setStatus("Regions+ selector unavailable.", "error");
+    return;
+  }
+
+  const selectedFeatures = getSelectedRegionsFeatures();
+  if (selectedFeatures.length === 0) {
+    setStatus("Select at least one Regions+ feature.", "error");
+    return;
+  }
+
+  const selectedSeasons = selector.getSelectedSeasons();
+  const selectedMaps = selector.getSelectedMaps();
+  const selectedRegions = selector.getSelectedRegions();
+  if (selectedSeasons.length === 0 && selectedMaps.length === 0 && selectedRegions.length === 0) {
+    setStatus("Select at least one season or map.", "error");
+    return;
+  }
+
+  try {
+    let content = state.main.text;
+    const messages = [];
+    for (const item of selectedFeatures) {
+      const def = item.definition;
+      let out = null;
+      if (def.mode === "seasonMap") {
+        out =
+          def.key === "missions"
+            ? completeSeasonsAndMaps(content, selectedSeasons, selectedMaps)
+            : markDiscoveredContestsComplete(content, selectedSeasons, selectedMaps);
+      } else if (def.key === "upgrades") {
+        out = unlockUpgrades(content, selectedRegions);
+      } else if (def.key === "watchtowers") {
+        out = unlockWatchtowers(content, selectedRegions);
+      } else if (def.key === "discoveries") {
+        out = unlockDiscoveries(content, selectedRegions);
+      } else if (def.key === "levels") {
+        out = unlockLevels(content, selectedRegions);
+      } else if (def.key === "garages") {
+        out = unlockGarages(content, selectedRegions, item.extra);
+      }
+      if (!out || typeof out.content !== "string") {
+        throw new Error(`Regions+ action failed for ${def.label}.`);
+      }
+      content = out.content;
+      messages.push(`${def.label}: ${out.message || "applied"}`);
+    }
+
+    if (els.regionsInfo) {
+      els.regionsInfo.textContent = messages.join(" ");
+    }
+    commitMain(
+      content,
+      `Regions+ updated (${selectedFeatures.length} feature${selectedFeatures.length === 1 ? "" : "s"}).`,
+    );
+  } catch (error) {
+    setStatus(`Failed Regions+ action: ${error.message}`, "error");
   }
 }
 
@@ -7236,3 +6456,5 @@ function extractBracketBlock(text, startIndex) {
 function uniqueList(list) {
   return [...new Set(list)];
 }
+
+init();

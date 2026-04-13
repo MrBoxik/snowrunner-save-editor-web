@@ -47,12 +47,8 @@
       ]
     }
   </script>
-  <link rel="icon" href="./favicon.ico" sizes="any">
-  <link rel="shortcut icon" href="./favicon.ico">
-  <link rel="icon" type="image/png" sizes="48x48" href="./favicon-48x48.png">
-  <link rel="apple-touch-icon" sizes="180x180" href="./apple-touch-icon.png">
-  <link rel="manifest" href="./site.webmanifest">
-  <link rel="stylesheet" href="./styles.css?v=20260301-1">
+  <link rel="icon" type="image/x-icon" href="./app_icon.ico">
+  <link rel="stylesheet" href="./styles.css?v=20260410-1">
 </head>
 <body>
   <div class="bg-orb orb-a"></div>
@@ -82,12 +78,14 @@
                 Steam saves are typically found at:<br>
                 [Steam install]/userdata/[steam_id]/1465360/remote<br>
                 Epic and other platforms:<br>
-                %USERPROFILE%\Documents\My Games\SnowRunner\base\storage\&lt;unique_key_folder&gt;
+                %USERPROFILE%\Documents\My Games\SnowRunner\base\storage\&lt;unique_key_folder&gt;<br>
+                WGS / Xbox App saves are typically found at:<br>
+                %LOCALAPPDATA%\Packages\FocusHomeInteractiveSA.SnowRunnerWindows10_4hny5m903y3g0\SystemAppData\wgs\&lt;user_id&gt;_&lt;title_id&gt;
               </div>
             </div>
           </div>
         </div>
-        <p>Upload a save folder (recommended) or a single file. The editor auto-loads save files and fog files.</p>
+        <p>Upload a save folder (recommended) or a single file. The editor auto-loads save files and fog files, including decoded WGS / Xbox App folders.</p>
         <input id="folder-input" type="file" webkitdirectory directory multiple hidden>
         <input id="main-file-input" type="file" hidden>
         <input id="common-file-input" type="file" hidden>
@@ -109,7 +107,7 @@
         <div id="main-meta" class="meta">Main Save: not loaded.</div>
         <div id="common-meta" class="meta">CommonSslSave: not loaded.</div>
         <div class="folder-choice-wrap">
-          <p class="help">Pick which `CompleteSave*` file is currently active in editor tabs:</p>
+          <p class="help">Pick which `CompleteSave*` or decoded WGS main save is currently active in editor tabs:</p>
           <div id="folder-main-choices" class="folder-choice-list"></div>
         </div>
       </article>
@@ -127,16 +125,9 @@
       <button class="tab-btn active" data-tab="save">Game Stats</button>
       <button class="tab-btn" data-tab="money">Money & Rank</button>
       <button class="tab-btn" data-tab="time">Time</button>
-      <button class="tab-btn" data-tab="missions">Missions</button>
-      <button class="tab-btn" data-tab="contests">Contests</button>
       <button class="tab-btn" data-tab="objectives">Objectives+</button>
-      <button class="tab-btn" data-tab="upgrades">Upgrades</button>
-      <button class="tab-btn" data-tab="watchtowers">Watchtowers</button>
-      <button class="tab-btn" data-tab="discoveries">Discoveries</button>
-      <button class="tab-btn" data-tab="levels">Levels</button>
-      <button class="tab-btn" data-tab="garages">Garages</button>
-      <button class="tab-btn" data-tab="vehicles">Vehicles</button>
-      <button class="tab-btn" data-tab="fog">Fog Tools</button>
+      <button class="tab-btn" data-tab="regions">Regions+</button>
+      <button class="tab-btn" data-tab="fog">Fog Tool</button>
       <button class="tab-btn" data-tab="rules">Rules</button>
       <button class="tab-btn" data-tab="trials">Trials</button>
       <button class="tab-btn" data-tab="pros">PROS</button>
@@ -251,7 +242,7 @@
           </div>
         </div>
       </div>
-      <p class="help">Loads `objectiveStates` and supports desktop-like Objectives+ flows: complete, task accept, and task re-accept.</p>
+      <p class="help">Loads `objectiveStates` and lets you mark filtered entries as completed. Uses embedded objective catalog data only.</p>
       <div class="form-grid objectives-search-grid">
         <label>Search objective key/name <input id="objectives-search" type="text" placeholder="e.g. US_04_01 or Michigan"></label>
       </div>
@@ -282,11 +273,34 @@
         <button id="refresh-objectives-btn" class="btn">Refresh list</button>
         <button id="select-objectives-btn" class="btn">Select filtered</button>
         <button id="clear-objectives-btn" class="btn">Clear selection</button>
-        <button id="accept-objectives-btn" class="btn">Accept selected tasks</button>
-        <button id="complete-objectives-btn" class="btn btn-primary">Apply changes</button>
+        <button id="complete-objectives-btn" class="btn btn-primary">Complete selected</button>
       </div>
       <p id="objectives-info" class="help">No file loaded.</p>
       <div id="objectives-list" class="objectives-list"></div>
+    </section>
+
+    <section class="tab-panel" id="panel-regions">
+      <div class="panel-head">
+        <h3>Regions+</h3>
+        <div class="tab-callouts">
+          <div class="tab-note">
+            <button type="button" class="tab-note-btn" aria-label="Info for Regions Plus">i</button>
+            <div class="tab-note-popover">Desktop-aligned bulk workflow. Pick regions once, then apply one or more region features in a single pass. Legacy Missions and Contests stay hidden by default, like the desktop editor.</div>
+          </div>
+        </div>
+      </div>
+      <p class="help">Pick the regions, then tick the features you want to apply.</p>
+      <label class="checkbox-line"><input id="regions-show-legacy" type="checkbox"> Show legacy actions (Missions / Contests)</label>
+      <div id="regions-selector"></div>
+      <div class="regions-card">
+        <div class="button-grid compact">
+          <button id="regions-check-all-btn" class="btn">Check all features</button>
+          <button id="regions-clear-btn" class="btn">Clear features</button>
+        </div>
+        <div id="regions-feature-list" class="regions-feature-list"></div>
+        <p id="regions-info" class="help">No region features selected.</p>
+        <button id="apply-regions-btn" class="btn btn-primary">Apply Selected Features</button>
+      </div>
     </section>
 
     <section class="tab-panel" id="panel-upgrades">
@@ -360,65 +374,12 @@
       <button id="unlock-garages-btn" class="btn btn-primary">Unlock Garages</button>
     </section>
 
-    <section class="tab-panel" id="panel-vehicles">
-      <div class="panel-head">
-        <h3>Vehicles</h3>
-        <div class="tab-callouts">
-          <div class="tab-note is-warning">
-            <button type="button" class="tab-note-btn" aria-label="Warning for Vehicles">!</button>
-            <div class="tab-note-popover">Use with caution. This tab edits STS world-object data. Keep backups enabled and prefer small changes first.</div>
-          </div>
-        </div>
-      </div>
-      <p class="help">Edits vehicle/trailer positions from `sts_level_*.cfg/.dat` files for the currently selected save slot.</p>
-      <div class="form-grid vehicles-filter-grid">
-        <label>Type
-          <select id="vehicles-type">
-            <option value="">All types</option>
-            <option value="Vehicle">Vehicle</option>
-            <option value="Trailer">Trailer</option>
-          </select>
-        </label>
-        <label>Region
-          <select id="vehicles-region">
-            <option value="">All regions</option>
-          </select>
-        </label>
-        <label>Map
-          <select id="vehicles-map">
-            <option value="">All maps</option>
-          </select>
-        </label>
-      </div>
-      <div class="form-grid vehicles-edit-grid">
-        <label>Name search <input id="vehicles-search" type="text" placeholder="e.g. azov, trailer, taymyr"></label>
-        <label>Lift Y by <input id="vehicles-lift-input" type="number" step="0.1" value="2"></label>
-        <label>X / Y / Z (optional)
-          <div class="vehicles-xyz-row">
-            <input id="vehicles-x-input" type="number" step="0.01" placeholder="X">
-            <input id="vehicles-y-input" type="number" step="0.01" placeholder="Y">
-            <input id="vehicles-z-input" type="number" step="0.01" placeholder="Z">
-          </div>
-        </label>
-      </div>
-      <div class="button-grid compact">
-        <button id="refresh-vehicles-btn" class="btn">Refresh STS list</button>
-        <button id="vehicles-select-filtered-btn" class="btn">Select filtered</button>
-        <button id="vehicles-clear-selection-btn" class="btn">Clear selection</button>
-        <button id="vehicles-delete-selected-btn" class="btn">Delete selected</button>
-        <button id="vehicles-unstuck-btn" class="btn">Unstuck selected (+Y)</button>
-        <button id="vehicles-apply-xyz-btn" class="btn btn-primary">Apply Custom XYZ</button>
-      </div>
-      <p id="vehicles-info" class="help">Upload a save folder to load STS files.</p>
-      <div id="vehicles-list" class="vehicles-list"></div>
-    </section>
-
     <section class="tab-panel" id="panel-fog">
       <div class="panel-head">
-        <h3>Fog Tools</h3>
+        <h3>Fog Tool</h3>
         <div class="tab-callouts">
           <div class="tab-note">
-            <button type="button" class="tab-note-btn" aria-label="Info for Fog Tools">i</button>
+            <button type="button" class="tab-note-btn" aria-label="Info for Fog Tool">i</button>
             <div class="tab-note-popover">Fog Image Tool — Tutorial: The Fog Image Tool lets you edit SnowRunner fog maps directly from your save files. Editor Tab → fine-tune each fog map manually or create artistic custom maps. Automation Tab → quickly cover or uncover entire maps, regions, or seasons. Fog maps are aligned with the map camera default position, so edits match what you see in-game.</div>
           </div>
         </div>
@@ -489,8 +450,9 @@
       <div class="panel-head">
         <h3>Rules</h3>
       </div>
-      <p class="help">Basic rule editing for common gameplay factors. More rules can be added later.</p>
+      <p class="help">Desktop-aligned New Game+ rule editor, including random rules, DLC vehicle availability, trailer store availability, special linked fields, and settings dictionary sync.</p>
       <div id="rules-editor" class="rules-editor"></div>
+      <label class="checkbox-line"><input id="rules-random" type="checkbox"> Random rules</label>
       <button id="apply-rules-btn" class="btn btn-primary">Apply Rules</button>
     </section>
 
@@ -546,6 +508,6 @@
   </aside>
 
   <script defer src="./assets/safe-defaults.min.js?v=20260226-1"></script>
-  <script defer src="./app.js?v=20260301-1"></script>
+  <script defer src="./app.js?v=20260410-1"></script>
 </body>
 </html>
