@@ -1,24 +1,5 @@
 # SnowRunner Save Editor (Web Port)
 
-This folder now includes a static web version of your editor:
-
-- `index.html`
-- `styles.css`
-- `app.js`
-
-## Run locally
-
-Open `index.html` in a browser.
-
-## Deploy to GitHub Pages
-
-1. Push these files to a GitHub repo.
-2. In GitHub: `Settings` -> `Pages`.
-3. Under `Build and deployment`, set:
-   - `Source`: `Deploy from a branch`
-   - `Branch`: `main` (or your branch), folder: `/ (root)`
-4. Save, wait for deployment, then open the Pages URL.
-
 ## What this web version supports
 
 - Main save upload/edit/download:
